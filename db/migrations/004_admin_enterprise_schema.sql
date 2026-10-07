@@ -1,7 +1,8 @@
 -- ==============================================================================
 -- GoDigital — Tier-0 Enterprise Admin & Skill Catalog Console Migration
+-- Migration: 004_admin_enterprise_schema.sql
 -- Target: PostgreSQL 16
--- Tables: admin_users, admin_audit_logs, puzzle_levels, daily_challenges, puzzle_level_analytics
+-- Tables: admin_users, admin_audit_logs, puzzle_levels (extended), daily_challenges (extended), puzzle_level_analytics
 -- ==============================================================================
 
 -- 1. Admin Users Master Table with RBAC and Account Lockout Defense
@@ -45,15 +46,15 @@ CREATE INDEX IF NOT EXISTS idx_audit_logs_action ON admin_audit_logs(action);
 CREATE INDEX IF NOT EXISTS idx_audit_logs_resource ON admin_audit_logs(resource_type, resource_id);
 CREATE INDEX IF NOT EXISTS idx_audit_logs_admin_id ON admin_audit_logs(admin_id);
 
--- 3. Dynamic Puzzle Catalog & Level Progression Curves
+-- 3. Dynamic Puzzle Catalog & Level Progression Curves (Create or Harmonize)
 CREATE TABLE IF NOT EXISTS puzzle_levels (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     game_id VARCHAR(50) NOT NULL REFERENCES games(game_id) ON DELETE CASCADE,
     level_number INT NOT NULL,
-    title VARCHAR(150) NOT NULL,
+    title VARCHAR(150) NOT NULL DEFAULT 'Level',
     category VARCHAR(50) NOT NULL DEFAULT 'puzzle',
-    difficulty VARCHAR(20) NOT NULL DEFAULT 'MEDIUM' CHECK (difficulty IN ('EASY', 'MEDIUM', 'HARD', 'EXPERT')),
-    puzzle_data JSONB NOT NULL,
+    difficulty VARCHAR(20) NOT NULL DEFAULT 'MEDIUM',
+    puzzle_data JSONB NOT NULL DEFAULT '{}'::jsonb,
     solution_data JSONB,
     min_moves INT NOT NULL DEFAULT 5,
     par_time_seconds INT NOT NULL DEFAULT 60,
@@ -68,18 +69,47 @@ CREATE TABLE IF NOT EXISTS puzzle_levels (
     CONSTRAINT uq_game_level UNIQUE (game_id, level_number)
 );
 
+-- Harmonize columns if puzzle_levels was created by 003
+ALTER TABLE puzzle_levels ADD COLUMN IF NOT EXISTS title VARCHAR(150) DEFAULT 'Level';
+ALTER TABLE puzzle_levels ADD COLUMN IF NOT EXISTS category VARCHAR(50) DEFAULT 'puzzle';
+ALTER TABLE puzzle_levels ADD COLUMN IF NOT EXISTS difficulty VARCHAR(20) DEFAULT 'MEDIUM';
+ALTER TABLE puzzle_levels ADD COLUMN IF NOT EXISTS puzzle_data JSONB;
+ALTER TABLE puzzle_levels ADD COLUMN IF NOT EXISTS solution_data JSONB;
+ALTER TABLE puzzle_levels ADD COLUMN IF NOT EXISTS min_moves INT DEFAULT 5;
+ALTER TABLE puzzle_levels ADD COLUMN IF NOT EXISTS par_time_seconds INT DEFAULT 60;
+ALTER TABLE puzzle_levels ADD COLUMN IF NOT EXISTS hint_cost_coins INT DEFAULT 10;
+ALTER TABLE puzzle_levels ADD COLUMN IF NOT EXISTS stars_to_unlock INT DEFAULT 0;
+ALTER TABLE puzzle_levels ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT 'ACTIVE';
+ALTER TABLE puzzle_levels ADD COLUMN IF NOT EXISTS version INT DEFAULT 1;
+ALTER TABLE puzzle_levels ADD COLUMN IF NOT EXISTS created_by UUID REFERENCES admin_users(id);
+ALTER TABLE puzzle_levels ADD COLUMN IF NOT EXISTS updated_by UUID REFERENCES admin_users(id);
+
+-- Synchronize legacy columns if present
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'puzzle_levels' AND column_name = 'config') THEN
+        UPDATE puzzle_levels SET puzzle_data = config WHERE puzzle_data IS NULL AND config IS NOT NULL;
+    END IF;
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'puzzle_levels' AND column_name = 'optimal_moves') THEN
+        UPDATE puzzle_levels SET min_moves = optimal_moves WHERE min_moves IS NULL AND optimal_moves IS NOT NULL;
+    END IF;
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'puzzle_levels' AND column_name = 'difficulty_tier') THEN
+        UPDATE puzzle_levels SET difficulty = difficulty_tier WHERE difficulty IS NULL AND difficulty_tier IS NOT NULL;
+    END IF;
+END $$;
+
 CREATE INDEX IF NOT EXISTS idx_puzzle_levels_game ON puzzle_levels(game_id, level_number);
 CREATE INDEX IF NOT EXISTS idx_puzzle_levels_difficulty ON puzzle_levels(difficulty);
 CREATE INDEX IF NOT EXISTS idx_puzzle_levels_status ON puzzle_levels(status);
 
--- 4. Daily Brain Training & Skill Challenges Calendar
+-- 4. Daily Brain Training & Skill Challenges Calendar (Create or Harmonize)
 CREATE TABLE IF NOT EXISTS daily_challenges (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     challenge_date DATE NOT NULL UNIQUE,
     game_id VARCHAR(50) NOT NULL REFERENCES games(game_id) ON DELETE CASCADE,
     puzzle_level_id UUID REFERENCES puzzle_levels(id) ON DELETE SET NULL,
     title VARCHAR(150) NOT NULL,
-    difficulty VARCHAR(20) NOT NULL DEFAULT 'MEDIUM' CHECK (difficulty IN ('EASY', 'MEDIUM', 'HARD', 'EXPERT')),
+    difficulty VARCHAR(20) NOT NULL DEFAULT 'MEDIUM',
     bonus_coins INT NOT NULL DEFAULT 25 CHECK (bonus_coins >= 0),
     target_score INT NOT NULL DEFAULT 1000,
     time_limit_seconds INT NOT NULL DEFAULT 120,
@@ -91,6 +121,30 @@ CREATE TABLE IF NOT EXISTS daily_challenges (
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+-- Harmonize daily_challenges columns
+ALTER TABLE daily_challenges ADD COLUMN IF NOT EXISTS puzzle_level_id UUID REFERENCES puzzle_levels(id) ON DELETE SET NULL;
+ALTER TABLE daily_challenges ADD COLUMN IF NOT EXISTS difficulty VARCHAR(20) DEFAULT 'MEDIUM';
+ALTER TABLE daily_challenges ADD COLUMN IF NOT EXISTS bonus_coins INT DEFAULT 25;
+ALTER TABLE daily_challenges ADD COLUMN IF NOT EXISTS target_score INT DEFAULT 1000;
+ALTER TABLE daily_challenges ADD COLUMN IF NOT EXISTS time_limit_seconds INT DEFAULT 120;
+ALTER TABLE daily_challenges ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT 'SCHEDULED';
+ALTER TABLE daily_challenges ADD COLUMN IF NOT EXISTS participants_count INT DEFAULT 0;
+ALTER TABLE daily_challenges ADD COLUMN IF NOT EXISTS completions_count INT DEFAULT 0;
+ALTER TABLE daily_challenges ADD COLUMN IF NOT EXISTS top_score INT DEFAULT 0;
+ALTER TABLE daily_challenges ADD COLUMN IF NOT EXISTS created_by UUID REFERENCES admin_users(id);
+ALTER TABLE daily_challenges ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();
+
+-- Synchronize daily challenges legacy columns if present
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'daily_challenges' AND column_name = 'coin_reward') THEN
+        UPDATE daily_challenges SET bonus_coins = coin_reward WHERE bonus_coins IS NULL AND coin_reward IS NOT NULL;
+    END IF;
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'daily_challenges' AND column_name = 'par_time_seconds') THEN
+        UPDATE daily_challenges SET time_limit_seconds = par_time_seconds WHERE time_limit_seconds IS NULL AND par_time_seconds IS NOT NULL;
+    END IF;
+END $$;
 
 CREATE INDEX IF NOT EXISTS idx_daily_challenges_date ON daily_challenges(challenge_date);
 CREATE INDEX IF NOT EXISTS idx_daily_challenges_status ON daily_challenges(status);
@@ -132,15 +186,6 @@ VALUES
     ('emoji-iq', 2, 'Animals Algebra', 'brain', 'MEDIUM', 4, 50, 10, '{"equation": "🦁 * 🦁 = 36; 🦁 + 🐯 = 11; 🐯 * 2 = ?", "options": [8, 10, 12, 14], "answer": 10}'::jsonb, '{"correct": 10}'::jsonb),
     ('bubble-shooter', 1, 'Emerald Cluster Warmup', 'puzzle', 'EASY', 8, 45, 5, '{"grid": "3x8", "colors": ["#10b981", "#3b82f6", "#ef4444"]}'::jsonb, '{"minClears": 5}'::jsonb)
 ON CONFLICT (game_id, level_number) DO NOTHING;
-
--- Initial Daily Challenges
-INSERT INTO daily_challenges (challenge_date, game_id, title, difficulty, bonus_coins, target_score, time_limit_seconds, status)
-VALUES
-    (CURRENT_DATE, 'royal-water-sort', 'Daily Liquid Flow Master', 'MEDIUM', 25, 1200, 90, 'ACTIVE'),
-    (CURRENT_DATE + INTERVAL '1 day', 'emoji-iq', 'Daily Brain Equation Blitz', 'HARD', 35, 1500, 120, 'SCHEDULED'),
-    (CURRENT_DATE + INTERVAL '2 day', 'bubble-shooter', 'Cascade Precision Challenge', 'MEDIUM', 30, 2000, 100, 'SCHEDULED'),
-    (CURRENT_DATE + INTERVAL '3 day', 'royal-water-sort', 'Grand Vial Separation', 'EXPERT', 50, 2500, 150, 'SCHEDULED')
-ON CONFLICT (challenge_date) DO NOTHING;
 
 -- Initial Audit Log Entry for Bootstrap
 INSERT INTO admin_audit_logs (admin_email, admin_role, action, resource_type, resource_id, reason, previous_state, new_state)
