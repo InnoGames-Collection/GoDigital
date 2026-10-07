@@ -1,0 +1,7 @@
+{
+  "name": "GoPlay",
+  "description": "Official GoPlay mobile gaming portal featuring skill-based games, weekly tournaments, verified real-time leaderboards, coin wallet, and instant play.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
+

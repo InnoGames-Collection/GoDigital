@@ -1,0 +1,148 @@
+# ==============================================================================
+# GoDigital — Complete Production Stack (Web + Admin + API + Postgres + Valkey)
+# Target: GCP Compute Engine VM (innoserver-serv001: 34.41.116.217)
+# Port Block:
+#   - 3700: godigital-web (Casual & Family Games Portal for telebirr)
+#   - 3702: godigital-api (Fastify Telebirr C2B/B2C API)
+#   - 3703: godigital-admin (Operations & Auditor Console)
+#   - 5442: godigital-postgres (PostgreSQL 16)
+#   - 6392: godigital-valkey (Valkey 8)
+# ==============================================================================
+
+services:
+  # ── PostgreSQL 16 Enterprise Relational Store ────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: godigital-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-godigital_db}
+      POSTGRES_USER: ${POSTGRES_USER:-godigital_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-godigital_secure_prod_password_2026}
+    volumes:
+      - godigital_pgdata:/var/lib/postgresql/data
+      - ./db/migrations:/docker-entrypoint-initdb.d:ro
+    ports:
+      - "127.0.0.1:5442:5432"
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-godigital_user} -d ${POSTGRES_DB:-godigital_db}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # ── Valkey 8.x Distributed High-Performance Cache ───────────────────────────
+  valkey:
+    image: valkey/valkey:8-alpine
+    container_name: godigital-valkey
+    restart: unless-stopped
+    command: ["valkey-server", "--maxmemory", "96mb", "--maxmemory-policy", "allkeys-lru"]
+    ports:
+      - "127.0.0.1:6392:6379"
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+    healthcheck:
+      test: ["CMD", "valkey-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # ── GoDigital Fastify API ───────────────────────────────────────────────────
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: godigital-api
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 3702
+      HOST: 0.0.0.0
+      DOMAIN: innopulseplatform.com
+      DATABASE_URL: "postgresql://${POSTGRES_USER:-godigital_user}:${POSTGRES_PASSWORD:-godigital_secure_prod_password_2026}@postgres:5432/${POSTGRES_DB:-godigital_db}?sslmode=disable"
+      VALKEY_URL: "redis://valkey:6379"
+      JWT_SECRET: ${JWT_SECRET:-godigital-telebirr-jwt-secret-key-prod-2026}
+      TELEBIRR_MODE: ${TELEBIRR_MODE:-live}
+      TELEBIRR_APP_KEY: ${TELEBIRR_APP_KEY:-}
+      TELEBIRR_APP_ID: ${TELEBIRR_APP_ID:-}
+      TELEBIRR_CHECKOUT_URL: ${TELEBIRR_CHECKOUT_URL:-https://telebirr.et/checkout}
+      TELEBIRR_NOTIFY_URL: ${TELEBIRR_NOTIFY_URL:-https://godigital-api.innopulseplatform.com/api/v1/payments/webhook}
+      TELEBIRR_RETURN_URL: ${TELEBIRR_RETURN_URL:-https://godigital.innopulseplatform.com/#/profile}
+      DEFAULT_TEST_MSISDN: ${DEFAULT_TEST_MSISDN:-0977057270}
+    ports:
+      - "127.0.0.1:3702:3702"
+    deploy:
+      resources:
+        limits:
+          memory: 384M
+    depends_on:
+      postgres:
+        condition: service_healthy
+      valkey:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O - http://127.0.0.1:3702/health || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+
+  # ── Dedicated Admin Console ─────────────────────────────────────────────────
+  admin:
+    build:
+      context: ./admin
+      dockerfile: Dockerfile.admin
+    container_name: godigital-admin
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 3703
+    ports:
+      - "127.0.0.1:3703:3703"
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O - http://127.0.0.1:3703/health || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+
+  # ── Public Player Web Portal (Casual Games) ─────────────────────────────────
+  web:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.web
+    container_name: godigital-web
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 3700
+    ports:
+      - "127.0.0.1:3700:3700"
+    deploy:
+      resources:
+        limits:
+          memory: 384M
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O - http://127.0.0.1:3700/health || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+
+volumes:
+  godigital_pgdata:

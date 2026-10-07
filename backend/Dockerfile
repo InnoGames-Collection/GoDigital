@@ -1,0 +1,28 @@
+# Multi-Stage Production Dockerfile for GoDigital Backend
+FROM node:20-alpine AS builder
+
+WORKDIR /app
+COPY package*.json tsconfig.json ./
+RUN npm install --no-audit
+
+COPY src/ ./src/
+RUN npm run build
+
+FROM node:20-alpine AS runner
+WORKDIR /app
+
+ENV NODE_ENV=production
+ENV PORT=3702
+ENV HOST=0.0.0.0
+
+RUN apk add --no-cache dumb-init
+COPY package*.json ./
+RUN npm install --omit=dev --no-audit && npm cache clean --force
+
+COPY --from=builder /app/dist ./dist
+
+USER node
+EXPOSE 3702
+
+ENTRYPOINT ["dumb-init", "--"]
+CMD ["node", "dist/index.js"]
