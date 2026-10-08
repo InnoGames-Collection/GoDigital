@@ -46,10 +46,10 @@ CREATE INDEX IF NOT EXISTS idx_admin_users_role ON admin_users(role);
 CREATE TABLE IF NOT EXISTS admin_audit_logs (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     admin_id UUID REFERENCES admin_users(id) ON DELETE SET NULL,
-    admin_email VARCHAR(150) NOT NULL,
-    admin_role VARCHAR(30) NOT NULL,
+    admin_email VARCHAR(150),
+    admin_role VARCHAR(30),
     action VARCHAR(100) NOT NULL,
-    resource_type VARCHAR(50) NOT NULL,
+    resource_type VARCHAR(50) NOT NULL DEFAULT 'SYSTEM',
     resource_id VARCHAR(100),
     previous_state JSONB,
     new_state JSONB,
@@ -58,6 +58,17 @@ CREATE TABLE IF NOT EXISTS admin_audit_logs (
     user_agent TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+-- Harmonize columns if admin_audit_logs was previously created by 001
+ALTER TABLE admin_audit_logs ADD COLUMN IF NOT EXISTS admin_email VARCHAR(150);
+ALTER TABLE admin_audit_logs ADD COLUMN IF NOT EXISTS admin_role VARCHAR(30);
+ALTER TABLE admin_audit_logs ADD COLUMN IF NOT EXISTS resource_type VARCHAR(50) DEFAULT 'SYSTEM';
+ALTER TABLE admin_audit_logs ADD COLUMN IF NOT EXISTS resource_id VARCHAR(100);
+ALTER TABLE admin_audit_logs ADD COLUMN IF NOT EXISTS previous_state JSONB;
+ALTER TABLE admin_audit_logs ADD COLUMN IF NOT EXISTS new_state JSONB;
+ALTER TABLE admin_audit_logs ADD COLUMN IF NOT EXISTS reason TEXT;
+ALTER TABLE admin_audit_logs ADD COLUMN IF NOT EXISTS ip_address VARCHAR(45);
+ALTER TABLE admin_audit_logs ADD COLUMN IF NOT EXISTS user_agent TEXT;
 
 CREATE INDEX IF NOT EXISTS idx_audit_logs_created_at ON admin_audit_logs(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_audit_logs_action ON admin_audit_logs(action);
@@ -102,14 +113,19 @@ ALTER TABLE puzzle_levels ADD COLUMN IF NOT EXISTS version INT DEFAULT 1;
 ALTER TABLE puzzle_levels ADD COLUMN IF NOT EXISTS created_by UUID REFERENCES admin_users(id);
 ALTER TABLE puzzle_levels ADD COLUMN IF NOT EXISTS updated_by UUID REFERENCES admin_users(id);
 
--- Synchronize legacy columns if present
+-- Synchronize legacy columns if present and relax NOT NULL constraints for flexible level definitions
 DO $$
 BEGIN
     IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'puzzle_levels' AND column_name = 'config') THEN
+        ALTER TABLE puzzle_levels ALTER COLUMN config DROP NOT NULL;
         UPDATE puzzle_levels SET puzzle_data = config WHERE puzzle_data IS NULL AND config IS NOT NULL;
     END IF;
     IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'puzzle_levels' AND column_name = 'optimal_moves') THEN
+        ALTER TABLE puzzle_levels ALTER COLUMN optimal_moves DROP NOT NULL;
         UPDATE puzzle_levels SET min_moves = optimal_moves WHERE min_moves IS NULL AND optimal_moves IS NOT NULL;
+    END IF;
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'puzzle_levels' AND column_name = 'par_moves') THEN
+        ALTER TABLE puzzle_levels ALTER COLUMN par_moves DROP NOT NULL;
     END IF;
     IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'puzzle_levels' AND column_name = 'difficulty_tier') THEN
         UPDATE puzzle_levels SET difficulty = difficulty_tier WHERE difficulty IS NULL AND difficulty_tier IS NOT NULL;
