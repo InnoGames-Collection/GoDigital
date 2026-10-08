@@ -37,6 +37,20 @@ for i in {1..30}; do
   sleep 1
 done
 
+echo "📦 Ensuring database migrations and seeds are applied..."
+for migration in db/migrations/*.sql; do
+  if [ -f "$migration" ]; then
+    echo "  Executing migration: $(basename "$migration")..."
+    docker compose -f docker-compose.server.yml exec -T postgres psql -U ${POSTGRES_USER:-godigital_user} -d ${POSTGRES_DB:-godigital_db} -f - < "$migration" || true
+  fi
+done
+for seed in db/seeds/*.sql; do
+  if [ -f "$seed" ]; then
+    echo "  Executing seed: $(basename "$seed")..."
+    docker compose -f docker-compose.server.yml exec -T postgres psql -U ${POSTGRES_USER:-godigital_user} -d ${POSTGRES_DB:-godigital_db} -f - < "$seed" || true
+  fi
+done
+
 docker compose -f docker-compose.server.yml build api
 docker compose -f docker-compose.server.yml up -d api
 

@@ -8,7 +8,7 @@ const __dirname = path.dirname(__filename);
 
 const app = express();
 const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3703;
-const API_URL = process.env.API_URL || 'http://127.0.0.1:3702';
+const API_URL = process.env.API_URL || (process.env.NODE_ENV === 'production' ? 'http://godigital-api:3702' : 'http://127.0.0.1:3702');
 
 function proxyToBackend(apiBaseUrl) {
   const parsedTarget = new URL(apiBaseUrl);

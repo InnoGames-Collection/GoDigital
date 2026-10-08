@@ -8,10 +8,11 @@
 -- 1. Admin Users Master Table with RBAC and Account Lockout Defense
 CREATE TABLE IF NOT EXISTS admin_users (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    username VARCHAR(50),
     email VARCHAR(150) NOT NULL UNIQUE,
     password_hash VARCHAR(255) NOT NULL,
-    name VARCHAR(100) NOT NULL,
-    role VARCHAR(30) NOT NULL CHECK (role IN ('SUPER_ADMIN', 'CONTENT_CREATOR', 'OPERATIONS_MANAGER', 'AUDITOR')),
+    name VARCHAR(100) NOT NULL DEFAULT 'Admin User',
+    role VARCHAR(30) NOT NULL CHECK (role IN ('SUPER_ADMIN', 'CONTENT_CREATOR', 'OPERATIONS_MANAGER', 'AUDITOR', 'FINANCIAL_AUDITOR')),
     department VARCHAR(100) NOT NULL DEFAULT 'Operations',
     is_active BOOLEAN NOT NULL DEFAULT TRUE,
     failed_login_attempts INT NOT NULL DEFAULT 0,
@@ -21,7 +22,24 @@ CREATE TABLE IF NOT EXISTS admin_users (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+-- Harmonize admin_users columns if already created in 001
+ALTER TABLE admin_users ADD COLUMN IF NOT EXISTS username VARCHAR(50);
+ALTER TABLE admin_users ADD COLUMN IF NOT EXISTS name VARCHAR(100) DEFAULT 'Admin User';
+ALTER TABLE admin_users ADD COLUMN IF NOT EXISTS department VARCHAR(100) DEFAULT 'Operations';
+ALTER TABLE admin_users ADD COLUMN IF NOT EXISTS is_active BOOLEAN NOT NULL DEFAULT TRUE;
+ALTER TABLE admin_users ADD COLUMN IF NOT EXISTS failed_login_attempts INT NOT NULL DEFAULT 0;
+ALTER TABLE admin_users ADD COLUMN IF NOT EXISTS locked_until TIMESTAMPTZ;
+ALTER TABLE admin_users ADD COLUMN IF NOT EXISTS last_login_at TIMESTAMPTZ;
+ALTER TABLE admin_users ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE admin_users ALTER COLUMN username DROP NOT NULL;
+
+-- Harmonize role check constraint to support SUPER_ADMIN and AUDITOR per port allocation
+ALTER TABLE admin_users DROP CONSTRAINT IF EXISTS chk_admin_role;
+ALTER TABLE admin_users DROP CONSTRAINT IF EXISTS admin_users_role_check;
+ALTER TABLE admin_users ADD CONSTRAINT chk_admin_role CHECK (role IN ('SUPER_ADMIN', 'CONTENT_CREATOR', 'OPERATIONS_MANAGER', 'AUDITOR', 'FINANCIAL_AUDITOR'));
+
 CREATE INDEX IF NOT EXISTS idx_admin_users_email ON admin_users(email);
+CREATE INDEX IF NOT EXISTS idx_admin_users_username ON admin_users(username);
 CREATE INDEX IF NOT EXISTS idx_admin_users_role ON admin_users(role);
 
 -- 2. Immutable Admin Audit Logs
@@ -167,14 +185,36 @@ CREATE TABLE IF NOT EXISTS puzzle_level_analytics (
 CREATE INDEX IF NOT EXISTS idx_puzzle_analytics_game_level ON puzzle_level_analytics(game_id, level_number);
 
 -- 6. Initial Bootstrap Seed Data
--- Default Admin Accounts (Password: Admin@GoDigital2026!)
-INSERT INTO admin_users (email, password_hash, name, role, department)
+-- Alignment per ITG/shared-infra/PORT_ALLOCATION_CREDENTIALS_AND_ONBOARDING.md:
+--   Super Admin: superadmin (admin@godigital.innopulseplatform.com) / AdminPass@2026 / SUPER_ADMIN
+--   Auditor:     godigital_auditor (auditor@godigital.innopulseplatform.com) / AdminPass@2026 / AUDITOR
+--   Demo Player: 0977057270 / OTP: 123456 / 100 Coins
+INSERT INTO admin_users (username, email, password_hash, name, role, department, is_active)
 VALUES
-    ('admin@godigital.et', '8f3e2a1b9c4d5e6f7a8b9c0d1e2f3a4b:a508e4c898a32b1e2c01dea5361388e30c8615293ea515713f572b7c23d6c77f9e395b65a3a05a6be7c9ade9e6b5fa510411a32fecba456f5d664af38fdc9c8f', 'Dawit Alemu (Super Admin)', 'SUPER_ADMIN', 'Executive Operations'),
-    ('creator@godigital.et', '8f3e2a1b9c4d5e6f7a8b9c0d1e2f3a4b:a508e4c898a32b1e2c01dea5361388e30c8615293ea515713f572b7c23d6c77f9e395b65a3a05a6be7c9ade9e6b5fa510411a32fecba456f5d664af38fdc9c8f', 'Bethlehem Tadesse (Content Lead)', 'CONTENT_CREATOR', 'Game Design & Catalog'),
-    ('ops@godigital.et', '8f3e2a1b9c4d5e6f7a8b9c0d1e2f3a4b:a508e4c898a32b1e2c01dea5361388e30c8615293ea515713f572b7c23d6c77f9e395b65a3a05a6be7c9ade9e6b5fa510411a32fecba456f5d664af38fdc9c8f', 'Yonas Haile (Ops Manager)', 'OPERATIONS_MANAGER', 'Player Support & Billing'),
-    ('auditor@godigital.et', '8f3e2a1b9c4d5e6f7a8b9c0d1e2f3a4b:a508e4c898a32b1e2c01dea5361388e30c8615293ea515713f572b7c23d6c77f9e395b65a3a05a6be7c9ade9e6b5fa510411a32fecba456f5d664af38fdc9c8f', 'Meron Bekele (Compliance Auditor)', 'AUDITOR', 'Security & Telebirr Audit')
-ON CONFLICT (email) DO NOTHING;
+    ('superadmin', 'admin@godigital.innopulseplatform.com', '8f3e2a1b9c4d5e6f7a8b9c0d1e2f3a4b:bd1638c32807be94f2a4a6d0e6dc04f4086f6b931c981ee3d36ca45b73890d7daaf9ec36dc982ab5abacf24bfee31056787ddb4d456ec623d992d7b886cbb718', 'Super Admin', 'SUPER_ADMIN', 'Executive Operations', TRUE),
+    ('godigital_auditor', 'auditor@godigital.innopulseplatform.com', '8f3e2a1b9c4d5e6f7a8b9c0d1e2f3a4b:bd1638c32807be94f2a4a6d0e6dc04f4086f6b931c981ee3d36ca45b73890d7daaf9ec36dc982ab5abacf24bfee31056787ddb4d456ec623d992d7b886cbb718', 'Financial Auditor', 'AUDITOR', 'Security & Telebirr Audit', TRUE),
+    ('dawit_admin', 'admin@godigital.et', '8f3e2a1b9c4d5e6f7a8b9c0d1e2f3a4b:a508e4c898a32b1e2c01dea5361388e30c8615293ea515713f572b7c23d6c77f9e395b65a3a05a6be7c9ade9e6b5fa510411a32fecba456f5d664af38fdc9c8f', 'Dawit Alemu (Super Admin)', 'SUPER_ADMIN', 'Executive Operations', TRUE),
+    ('creator', 'creator@godigital.et', '8f3e2a1b9c4d5e6f7a8b9c0d1e2f3a4b:a508e4c898a32b1e2c01dea5361388e30c8615293ea515713f572b7c23d6c77f9e395b65a3a05a6be7c9ade9e6b5fa510411a32fecba456f5d664af38fdc9c8f', 'Bethlehem Tadesse (Content Lead)', 'CONTENT_CREATOR', 'Game Design & Catalog', TRUE),
+    ('ops_manager', 'ops@godigital.et', '8f3e2a1b9c4d5e6f7a8b9c0d1e2f3a4b:a508e4c898a32b1e2c01dea5361388e30c8615293ea515713f572b7c23d6c77f9e395b65a3a05a6be7c9ade9e6b5fa510411a32fecba456f5d664af38fdc9c8f', 'Yonas Haile (Ops Manager)', 'OPERATIONS_MANAGER', 'Player Support & Billing', TRUE),
+    ('auditor', 'auditor@godigital.et', '8f3e2a1b9c4d5e6f7a8b9c0d1e2f3a4b:a508e4c898a32b1e2c01dea5361388e30c8615293ea515713f572b7c23d6c77f9e395b65a3a05a6be7c9ade9e6b5fa510411a32fecba456f5d664af38fdc9c8f', 'Meron Bekele (Compliance Auditor)', 'AUDITOR', 'Security & Telebirr Audit', TRUE)
+ON CONFLICT (email) DO UPDATE SET
+    username = EXCLUDED.username,
+    password_hash = EXCLUDED.password_hash,
+    name = EXCLUDED.name,
+    role = EXCLUDED.role,
+    department = EXCLUDED.department,
+    is_active = TRUE,
+    failed_login_attempts = 0,
+    locked_until = NULL,
+    updated_at = NOW();
+
+-- Seed Preloaded Demo Player (MSISDN: 0977057270 / 100 Coins)
+INSERT INTO profiles (phone, display_name, avatar_id, coins, energy, telebirr_linked, telebirr_balance)
+VALUES ('+251977057270', 'Demo Player (100 Coins)', 'avatar_runner', 100, 5, TRUE, 0.00)
+ON CONFLICT (phone) DO UPDATE SET
+    coins = GREATEST(profiles.coins, 100),
+    telebirr_linked = TRUE,
+    updated_at = NOW();
 
 -- Initial Seed Levels for Core Puzzle Titles
 INSERT INTO puzzle_levels (game_id, level_number, title, category, difficulty, min_moves, par_time_seconds, hint_cost_coins, puzzle_data, solution_data)

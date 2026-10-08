@@ -29,7 +29,7 @@ export async function adminRoutes(fastify: FastifyInstance) {
   // Admin Login with Brute-Force Lockout Defense
   fastify.post('/admin/auth/login', async (req: FastifyRequest, reply: FastifyReply) => {
     const loginSchema = z.object({
-      email: z.string().email(),
+      email: z.string().min(3), // Supports username (superadmin) or email address
       password: z.string().min(6),
     });
 
@@ -47,7 +47,7 @@ export async function adminRoutes(fastify: FastifyInstance) {
     const userAgent = (req.headers['user-agent'] as string) || 'Unknown';
 
     const userRes = await pool.query(
-      `SELECT * FROM admin_users WHERE email = LOWER($1)`,
+      `SELECT * FROM admin_users WHERE LOWER(email) = LOWER($1) OR LOWER(username) = LOWER($1)`,
       [email]
     );
 

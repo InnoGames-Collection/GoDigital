@@ -102,6 +102,7 @@ services:
     environment:
       NODE_ENV: production
       PORT: 3703
+      API_URL: http://godigital-api:3702
     ports:
       - "127.0.0.1:3703:3703"
     deploy:

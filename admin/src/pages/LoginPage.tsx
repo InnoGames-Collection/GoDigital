@@ -8,8 +8,8 @@ interface LoginPageProps {
 }
 
 export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
-  const [email, setEmail] = useState('admin@godigital.et');
-  const [password, setPassword] = useState('Admin@GoDigital2026!');
+  const [email, setEmail] = useState('superadmin');
+  const [password, setPassword] = useState('AdminPass@2026');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -30,10 +30,10 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
   };
 
   const quickRoles = [
-    { role: 'SUPER_ADMIN' as AdminRole, label: 'Dawit (Super Admin)', email: 'admin@godigital.et' },
-    { role: 'CONTENT_CREATOR' as AdminRole, label: 'Bethlehem (Content Lead)', email: 'creator@godigital.et' },
-    { role: 'OPERATIONS_MANAGER' as AdminRole, label: 'Yonas (Ops Manager)', email: 'ops@godigital.et' },
-    { role: 'AUDITOR' as AdminRole, label: 'Meron (Auditor)', email: 'auditor@godigital.et' },
+    { role: 'SUPER_ADMIN' as AdminRole, label: 'Super Admin', email: 'superadmin', password: 'AdminPass@2026' },
+    { role: 'AUDITOR' as AdminRole, label: 'Financial Auditor', email: 'godigital_auditor', password: 'AdminPass@2026' },
+    { role: 'CONTENT_CREATOR' as AdminRole, label: 'Bethlehem (Content)', email: 'creator@godigital.et', password: 'Admin@GoDigital2026!' },
+    { role: 'OPERATIONS_MANAGER' as AdminRole, label: 'Yonas (Ops Manager)', email: 'ops@godigital.et', password: 'Admin@GoDigital2026!' },
   ];
 
   return (
@@ -69,16 +69,16 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-                Corporate Email Address:
+                Administrative Username or Email:
               </label>
               <div className="relative">
                 <Mail size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" />
                 <input
-                  type="email"
+                  type="text"
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="admin@godigital.et"
+                  placeholder="superadmin or admin@godigital.innopulseplatform.com"
                   className="w-full pl-10 pr-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white placeholder-slate-600 focus:outline-hidden focus:border-sky-500"
                 />
               </div>
@@ -124,7 +124,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
                   type="button"
                   onClick={() => {
                     setEmail(r.email);
-                    setPassword('Admin@GoDigital2026!');
+                    setPassword(r.password);
                   }}
                   className="text-left p-2 rounded-xl bg-slate-950 hover:bg-slate-800/80 border border-slate-800 text-[11px] transition"
                 >

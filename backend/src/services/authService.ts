@@ -47,14 +47,16 @@ export const authService = {
       };
     }
 
+    const initialCoins = (local === '0977057270' || rawPhone === '0977057270' || rawPhone === env.DEFAULT_TEST_MSISDN) ? 100 : 50;
+
     // Upsert Profile in PostgreSQL
     const upsertRes = await query(
       `INSERT INTO profiles (phone, display_name, avatar_id, coins, energy, telebirr_linked, telebirr_balance)
-       VALUES ($1, $2, 'avatar_runner', 50, 5, TRUE, 0.00)
+       VALUES ($1, $2, 'avatar_runner', $3, 5, TRUE, 0.00)
        ON CONFLICT (phone) DO UPDATE
-         SET telebirr_linked = TRUE, updated_at = NOW()
+         SET telebirr_linked = TRUE, coins = GREATEST(profiles.coins, $3), updated_at = NOW()
        RETURNING id, role`,
-      [e164, `Gamer_${local.slice(-4)}`]
+      [e164, `Gamer_${local.slice(-4)}`, initialCoins]
     );
 
     const user = upsertRes.rows[0];
