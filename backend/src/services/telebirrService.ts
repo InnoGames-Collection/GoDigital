@@ -101,7 +101,7 @@ export const telebirrService = {
       subject: params.itemTitle,
       notifyUrl: env.TELEBIRR_NOTIFY_URL,
       returnUrl: env.TELEBIRR_RETURN_URL,
-      shortCode: env.TELEBIRR_APP_ID,
+      shortCode: env.TELEBIRR_SHORT_CODE || env.TELEBIRR_APP_ID,
       timestamp: Date.now().toString(),
     };
 

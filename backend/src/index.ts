@@ -29,6 +29,9 @@ async function main() {
     'godigital-admin.innopulseplatform.com',
     'admin.godigital.innopulseplatform.com',
     'api.godigital.innopulseplatform.com',
+    'godigital.com.et',
+    'api.godigital.com.et',
+    'admin.godigital.com.et',
     'localhost',
     '127.0.0.1',
   ];
@@ -41,8 +44,10 @@ async function main() {
         if (
           allowedHostnames.includes(hostname) ||
           hostname.endsWith('.innopulseplatform.com') ||
+          hostname.endsWith('.godigital.com.et') ||
           hostname.endsWith('.telebirr.et') ||
-          hostname === 'telebirr.et'
+          hostname === 'telebirr.et' ||
+          hostname.endsWith('.ethiotelecom.et')
         ) {
           return cb(null, true);
         }

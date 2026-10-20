@@ -63,16 +63,17 @@ services:
       NODE_ENV: production
       PORT: 3702
       HOST: 0.0.0.0
-      DOMAIN: innopulseplatform.com
+      DOMAIN: godigital.com.et
       DATABASE_URL: "postgresql://${POSTGRES_USER:-godigital_user}:${POSTGRES_PASSWORD:-godigital_secure_prod_password_2026}@postgres:5432/${POSTGRES_DB:-godigital_db}?sslmode=disable"
       VALKEY_URL: "redis://valkey:6379"
       JWT_SECRET: ${JWT_SECRET:-godigital-telebirr-jwt-secret-key-prod-2026}
       TELEBIRR_MODE: ${TELEBIRR_MODE:-live}
       TELEBIRR_APP_KEY: ${TELEBIRR_APP_KEY:-}
       TELEBIRR_APP_ID: ${TELEBIRR_APP_ID:-}
+      TELEBIRR_SHORT_CODE: ${TELEBIRR_SHORT_CODE:-9892}
       TELEBIRR_CHECKOUT_URL: ${TELEBIRR_CHECKOUT_URL:-https://telebirr.et/checkout}
-      TELEBIRR_NOTIFY_URL: ${TELEBIRR_NOTIFY_URL:-https://godigital-api.innopulseplatform.com/api/v1/payments/webhook}
-      TELEBIRR_RETURN_URL: ${TELEBIRR_RETURN_URL:-https://godigital.innopulseplatform.com/#/profile}
+      TELEBIRR_NOTIFY_URL: ${TELEBIRR_NOTIFY_URL:-https://godigital.com.et/api/v1/payments/webhook}
+      TELEBIRR_RETURN_URL: ${TELEBIRR_RETURN_URL:-https://godigital.com.et/#/profile}
       DEFAULT_TEST_MSISDN: ${DEFAULT_TEST_MSISDN:-0977057270}
     ports:
       - "127.0.0.1:3702:3702"

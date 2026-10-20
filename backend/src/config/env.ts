@@ -8,7 +8,7 @@ export const env = cleanEnv(process.env, {
   PORT: port({ default: 3702 }),
   ADMIN_PORT: port({ default: 3703 }),
   HOST: str({ default: '0.0.0.0' }),
-  DOMAIN: str({ default: 'innopulseplatform.com' }),
+  DOMAIN: str({ default: 'godigital.com.et' }),
 
   // PostgreSQL
   DATABASE_URL: str({ default: 'postgresql://godigital_user:godigital_secure_prod_password_2026@localhost:5442/godigital_db' }),
@@ -32,8 +32,9 @@ export const env = cleanEnv(process.env, {
   TELEBIRR_APP_KEY: str({ default: '' }),
   TELEBIRR_APP_ID: str({ default: '' }),
   TELEBIRR_PUBLIC_KEY: str({ default: '' }),
+  TELEBIRR_SHORT_CODE: str({ default: '9892' }),
   TELEBIRR_CHECKOUT_URL: str({ default: 'https://telebirr.et/checkout' }),
-  TELEBIRR_NOTIFY_URL: str({ default: 'https://godigital-api.innopulseplatform.com/api/v1/payments/webhook' }),
-  TELEBIRR_RETURN_URL: str({ default: 'https://godigital.innopulseplatform.com/#/profile' }),
+  TELEBIRR_NOTIFY_URL: str({ default: 'https://godigital.com.et/api/v1/payments/webhook' }),
+  TELEBIRR_RETURN_URL: str({ default: 'https://godigital.com.et/#/profile' }),
   DEFAULT_TEST_MSISDN: str({ default: '0977057270' }),
 });
