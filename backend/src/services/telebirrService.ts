@@ -3,6 +3,7 @@ import { query, getClient } from '../config/database.js';
 import { computeHmacSha256 } from '../utils/crypto.js';
 import { subscriptionService } from './subscriptionService.js';
 import { walletService } from './walletService.js';
+import { NotificationService } from './notificationService.js';
 import { SubscriptionPlan } from '../types/domain.js';
 
 export interface InitiatePaymentParams {
@@ -60,10 +61,28 @@ export const telebirrService = {
           orderId,
           `TeleBirr Sandbox Purchase: ${params.itemTitle}`
         );
+
+        NotificationService.createNotification({
+          phone: params.phone,
+          type: 'COIN_CREDIT',
+          title: '🪙 Coins Credited',
+          message: `+${params.coinsReward} GoDigital Coins have been credited to your wallet via telebirr.`,
+          action_url: 'profile',
+          action_label: 'View Wallet',
+        }).catch(() => {});
       }
 
       if (params.itemType === 'VIP_SUBSCRIPTION' && params.subscriptionPlan) {
         await subscriptionService.activatePlanForUser(params.userId, params.subscriptionPlan);
+
+        NotificationService.createNotification({
+          phone: params.phone,
+          type: 'SUBSCRIPTION',
+          title: '⭐ VIP Pass Activated',
+          message: `Your ${params.subscriptionPlan} pass is active! Enjoy unlimited gaming across all titles.`,
+          action_url: 'games',
+          action_label: 'Play Games',
+        }).catch(() => {});
       }
 
       return {

@@ -4,6 +4,7 @@ import { gameSessionService, ReplayConflictError } from '../services/gameSession
 import { streakService } from '../services/streakService.js';
 import { walletService } from '../services/walletService.js';
 import { leaderboardService } from '../services/leaderboardService.js';
+import { NotificationService } from '../services/notificationService.js';
 import { query } from '../config/database.js';
 import { env } from '../config/env.js';
 
@@ -203,6 +204,158 @@ export async function gameRoutes(fastify: FastifyInstance) {
   });
 
   // =========================================================================
+  // AUTHORITATIVE GAME CATALOG (FROM POSTGRESQL games TABLE)
+  // =========================================================================
+
+  const getCatalogHandler = async () => {
+    const gamesRes = await query(
+      `SELECT game_id, title, category, is_free, requires_coins, is_enabled, max_score, max_score_per_sec
+         FROM games
+        WHERE is_enabled = TRUE
+        ORDER BY game_id`
+    );
+
+    const games = gamesRes.rows.map((row: any) => ({
+      gameId: row.game_id,
+      gameName: row.title,
+      titleAmharic: row.title,
+      category: row.category,
+      isFree: Boolean(row.is_free),
+      requiresCoins: Boolean(row.requires_coins),
+      coinCost: row.requires_coins ? 2 : 0,
+      isActive: Boolean(row.is_enabled),
+      maxScore: row.max_score,
+      maxScorePerSec: row.max_score_per_sec,
+      thumbnail: `/banners/${row.game_id}.png`,
+      banner: `/banners/${row.game_id}.png`,
+    }));
+
+    return { success: true, games };
+  };
+
+  fastify.get('/catalog', getCatalogHandler);
+  fastify.get('/list', getCatalogHandler);
+  fastify.get('/all', getCatalogHandler);
+
+  // =========================================================================
+  // AUTHORITATIVE PERIOD LEADERBOARDS (FROM POSTGRESQL daily_scores & high_scores)
+  // =========================================================================
+
+  // Weekly Leaderboard (aggregated over the last 7 days)
+  fastify.get('/leaderboards/weekly', async (req, reply) => {
+    const res = await query(
+      `SELECT p.id as "userId", p.display_name as "playerName", p.phone, p.phone_local, p.avatar_id as "avatarId",
+              COALESCE(MAX(ds.best_score), MAX(hs.best_score), 0) as score,
+              COUNT(DISTINCT ds.score_date) as "bestScoresCount",
+              EXTRACT(EPOCH FROM MAX(COALESCE(ds.score_date::timestamptz, hs.updated_at, p.created_at))) * 1000 as timestamp
+         FROM profiles p
+         LEFT JOIN daily_scores ds ON ds.user_id = p.id AND ds.score_date >= CURRENT_DATE - INTERVAL '7 days'
+         LEFT JOIN high_scores hs ON hs.user_id = p.id
+        WHERE p.role != 'admin'
+        GROUP BY p.id, p.display_name, p.phone, p.phone_local, p.avatar_id
+       HAVING COALESCE(MAX(ds.best_score), MAX(hs.best_score), 0) > 0
+        ORDER BY score DESC
+        LIMIT 50`
+    );
+
+    const PRIZES = ['50K ETB', '40K ETB', '35K ETB', '30K ETB', '25K ETB', '20K ETB', '15K ETB', '10K ETB', '5K ETB', '3K ETB'];
+
+    const entries = res.rows.map((row: any, idx: number) => {
+      const rawPhone = row.phone_local || row.phone || '0911000000';
+      const masked = rawPhone.length >= 7 
+        ? `${rawPhone.substring(0, 3)}*****${rawPhone.slice(-3)}` 
+        : '091*****890';
+
+      return {
+        rank: idx + 1,
+        userId: row.userId,
+        phone: rawPhone,
+        masked,
+        totalPoints: Number(row.score),
+        bestScoresCount: parseInt(row.bestScoresCount, 10) || 1,
+        timestamp: Number(row.timestamp) || Date.now(),
+        reward: PRIZES[idx] || '1K ETB',
+      };
+    });
+
+    return reply.send({ success: true, entries, totalContenders: entries.length });
+  });
+
+  // Monthly Leaderboard (aggregated over the last 30 days)
+  fastify.get('/leaderboards/monthly', async (req, reply) => {
+    const res = await query(
+      `SELECT p.id as "userId", p.display_name as "playerName", p.phone, p.phone_local, p.avatar_id as "avatarId",
+              COALESCE(MAX(ds.best_score), MAX(hs.best_score), 0) as score,
+              COUNT(DISTINCT ds.score_date) as "bestScoresCount",
+              EXTRACT(EPOCH FROM MAX(COALESCE(ds.score_date::timestamptz, hs.updated_at, p.created_at))) * 1000 as timestamp
+         FROM profiles p
+         LEFT JOIN daily_scores ds ON ds.user_id = p.id AND ds.score_date >= CURRENT_DATE - INTERVAL '30 days'
+         LEFT JOIN high_scores hs ON hs.user_id = p.id
+        WHERE p.role != 'admin'
+        GROUP BY p.id, p.display_name, p.phone, p.phone_local, p.avatar_id
+       HAVING COALESCE(MAX(ds.best_score), MAX(hs.best_score), 0) > 0
+        ORDER BY score DESC
+        LIMIT 50`
+    );
+
+    const PRIZES = ['50K ETB', '40K ETB', '35K ETB', '30K ETB', '25K ETB', '20K ETB', '15K ETB', '10K ETB', '5K ETB', '3K ETB'];
+
+    const entries = res.rows.map((row: any, idx: number) => {
+      const rawPhone = row.phone_local || row.phone || '0911000000';
+      const masked = rawPhone.length >= 7 
+        ? `${rawPhone.substring(0, 3)}*****${rawPhone.slice(-3)}` 
+        : '091*****890';
+
+      return {
+        rank: idx + 1,
+        userId: row.userId,
+        phone: rawPhone,
+        masked,
+        totalPoints: Number(row.score),
+        bestScoresCount: parseInt(row.bestScoresCount, 10) || 1,
+        timestamp: Number(row.timestamp) || Date.now(),
+        reward: PRIZES[idx] || '1K ETB',
+      };
+    });
+
+    return reply.send({ success: true, entries, totalContenders: entries.length });
+  });
+
+  // Per-Game High Scores Leaderboard
+  fastify.get('/leaderboards/game/:gameId', async (req, reply) => {
+    const { gameId } = req.params as { gameId: string };
+    const res = await query(
+      `SELECT p.id as "userId", p.display_name as "playerName", p.phone, p.phone_local, p.avatar_id as "avatarId",
+              hs.best_score as score,
+              EXTRACT(EPOCH FROM hs.updated_at) * 1000 as timestamp
+         FROM high_scores hs
+         JOIN profiles p ON hs.user_id = p.id
+        WHERE hs.game_id = $1 AND p.role != 'admin'
+        ORDER BY hs.best_score DESC, hs.updated_at ASC
+        LIMIT 50`,
+      [gameId]
+    );
+
+    const entries = res.rows.map((row: any, idx: number) => {
+      const rawPhone = row.phone_local || row.phone || '0911000000';
+      const masked = rawPhone.length >= 7 
+        ? `${rawPhone.substring(0, 3)}*****${rawPhone.slice(-3)}` 
+        : '091*****890';
+
+      return {
+        rank: idx + 1,
+        userId: row.userId,
+        playerName: row.playerName || `Player ${masked}`,
+        playerMasked: masked,
+        score: parseInt(row.score, 10) || 0,
+        rewardText: idx === 0 ? '500 Coins' : idx === 1 ? '300 Coins' : idx === 2 ? '200 Coins' : idx < 5 ? '100 Coins' : undefined,
+      };
+    });
+
+    return reply.send(entries);
+  });
+
+  // =========================================================================
   // 4. TIMEZONE-AWARE DAILY STREAK (AFRICA/ADDIS_ABABA MIDNIGHT)
   // =========================================================================
 
@@ -281,6 +434,9 @@ export async function gameRoutes(fastify: FastifyInstance) {
     const userId = req.user?.userId || '00000000-0000-0000-0000-000000000000';
     const { sessionId, nonce, moves, rawScore, durationSeconds, gameId } = (req.body || {}) as any;
 
+    let finalScore = Number(rawScore) || 0;
+    const playerPhone = req.user?.phone || env.DEFAULT_TEST_MSISDN;
+
     if (sessionId && nonce) {
       try {
         const result = await gameSessionService.submitPuzzleSolution({
@@ -290,6 +446,9 @@ export async function gameRoutes(fastify: FastifyInstance) {
           moves: moves || [],
           durationSeconds: durationSeconds || 5,
         });
+        if (result.success && result.score) {
+          finalScore = result.score;
+        }
         return reply.status(result.statusCode || 200).send(result);
       } catch (err: any) {
         if (err instanceof ReplayConflictError) {
@@ -298,10 +457,23 @@ export async function gameRoutes(fastify: FastifyInstance) {
       }
     }
 
+    // Trigger Notification for Verified Score / Personal Record
+    if (finalScore > 0 && playerPhone) {
+      NotificationService.createNotification({
+        phone: playerPhone,
+        type: 'HIGH_SCORE',
+        title: '🏆 Score Verified!',
+        message: `You recorded a score of ${finalScore.toLocaleString()} pts in ${gameId || 'Helix Jump'}!`,
+        metadata: { gameId, score: finalScore },
+        action_url: 'leaderboard',
+        action_label: 'View Rankings',
+      }).catch((e) => fastify.log.warn(`[Notification] Failed to create score notification: ${e}`));
+    }
+
     return reply.send({
       success: true,
       verified: true,
-      score: rawScore || 1000,
+      score: finalScore || 1000,
     });
   });
 }

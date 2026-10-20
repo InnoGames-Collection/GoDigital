@@ -4436,9 +4436,49 @@ function renderColorTapSprintArt(ctx: CanvasRenderingContext2D, w: number, h: nu
   ctx.restore();
 }
 
+// Static High-Definition Game Promotional Banners (from public/banners/)
+// User added bespoke banners for other games named after each game.
+// Flip Tile is kept on its custom procedural 3D canvas banner.
+export const GAME_STATIC_BANNERS: Record<string, string> = {
+  'helix-jump': '/banners/Helix.png',
+  'bubble-shooter': '/banners/bubble%20shooter.png',
+  'emoji-iq': '/banners/emoji%20iq.png',
+  'royal-water-sort': '/banners/Royal%20Water%20Sort.png',
+  'hill-rider': '/banners/hill_climb.webp',
+  'hill-climb': '/banners/hill_climb.webp',
+  'sorting-balls': '/banners/sorting%20ball.png',
+  'sorting-ball': '/banners/sorting%20ball.png',
+  'puzzle-block': '/banners/block.png',
+  'block': '/banners/block.png',
+  'memory-match': '/banners/memory%20match.png',
+  'color-rush': '/banners/color%20rush.png',
+  'solitaire': '/banners/solitaire.png',
+  'emoji-sorting-ball': '/banners/emoji%20sorting%20ball.png',
+};
+
+/**
+ * Returns static promotional banner image URL for a game if available.
+ */
+export function getGameBannerUrl(gameIdOrName: string): string | undefined {
+  if (!gameIdOrName) return undefined;
+  const key = gameIdOrName.toLowerCase().trim();
+  if (GAME_STATIC_BANNERS[gameIdOrName]) return GAME_STATIC_BANNERS[gameIdOrName];
+  if (GAME_STATIC_BANNERS[key]) return GAME_STATIC_BANNERS[key];
+  return undefined;
+}
+
 // Public Artwork Dispatcher & Cached Master Generator
 // =============================================================================
 export function getGameArtworkUrl(gameId: string): string {
+  if (!gameId) return '';
+
+  // If this game has a static promotional banner, return it directly.
+  // Note: Flip Tile is intentionally not in GAME_STATIC_BANNERS to preserve its custom banner.
+  const staticBanner = getGameBannerUrl(gameId);
+  if (staticBanner) {
+    return staticBanner;
+  }
+
   if (artworkCache[gameId]) {
     return artworkCache[gameId];
   }

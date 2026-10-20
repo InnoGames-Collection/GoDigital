@@ -35,12 +35,3 @@ VALUES
     ('tourn_helix_jump_01', 'Helix Tower Grand Prix', 'helix-jump', NOW() - INTERVAL '1 day', NOW() + INTERVAL '6 days', 25000, 'ACTIVE')
 ON CONFLICT (id) DO NOTHING;
 
--- 4. Seed Contenders for Helix Jump Tournament
-INSERT INTO tournament_entries (tournament_id, player_msisdn, masked_msisdn, score, rank, prize_etb)
-VALUES
-    ('tourn_helix_jump_01', '251911998890', '091*****890', 4850, 1, 10000),
-    ('tourn_helix_jump_01', '251922334412', '092*****412', 4320, 2, 6000),
-    ('tourn_helix_jump_01', '251933445589', '093*****589', 3950, 3, 3000),
-    ('tourn_helix_jump_01', '251944556633', '094*****633', 3420, 4, 1000),
-    ('tourn_helix_jump_01', '251955667744', '095*****744', 3180, 5, 1000)
-ON CONFLICT (tournament_id, player_msisdn) DO NOTHING;

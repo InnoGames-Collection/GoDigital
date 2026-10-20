@@ -1,18 +1,17 @@
 /**
- * FAQ Page Component for TelePlus
+ * GoDigital - FAQ Page Component
  * 
  * Features:
- * - Standard expandable/collapsible accordion design
- * - Each FAQ question appears as a separate row/item
- * - Left: Question text; Right: Dynamic '+' (collapsed) or '−' (expanded) icon
- * - Entire FAQ row is clickable
- * - Smooth expansion/collapse
- * - All 27 questions from the official source of truth document
+ * - Expandable/collapsible accordion with dynamic +/- indicator
+ * - Questions clearly visible before expansion in warm cream (#FFF0CF)
+ * - Answers fully readable upon expansion in warm neutral (#E6C8A4)
+ * - Quick search filter + Expand All / Collapse All controls
+ * - Consistent destination header with Back button & warm sunset theme
  */
 
 import React, { useState } from 'react';
-import { HelpCircle, ArrowLeft, Plus, Minus, Search } from 'lucide-react';
-import { TELEPLUS_FAQ_ITEMS, FAQItem } from '../../data/teleplusContent';
+import { HelpCircle, ArrowLeft, Plus, Minus, Search, Sparkles } from 'lucide-react';
+import { TELEPLUS_FAQ_ITEMS } from '../../data/teleplusContent';
 
 interface FAQPageProps {
   onBack?: () => void;
@@ -20,9 +19,9 @@ interface FAQPageProps {
 }
 
 export const FAQPage: React.FC<FAQPageProps> = ({ onBack, showHeader = true }) => {
-  // Set of opened question IDs (allows multiple open or accordion toggle)
+  // First item open by default for immediate preview
   const [openItemIds, setOpenItemIds] = useState<Record<string, boolean>>({
-    'faq-1': true, // Open first item by default for quick preview
+    'faq-1': true,
   });
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -52,55 +51,61 @@ export const FAQPage: React.FC<FAQPageProps> = ({ onBack, showHeader = true }) =
   );
 
   return (
-    <div className="min-h-screen bg-white text-[#17202A] pb-24 max-w-md md:max-w-xl lg:max-w-3xl mx-auto px-3.5 pt-3 select-none">
+    <div className="min-h-screen text-[#FFF0CF] pb-28 max-w-md md:max-w-xl lg:max-w-3xl mx-auto px-3.5 pt-3 select-none space-y-4 relative z-10">
+      
       {/* 1. Header with Back Button */}
       {showHeader && (
-        <div className="flex items-center justify-between gap-3 bg-[#1688C9] text-white p-3.5 rounded-2xl shadow-xs mb-4">
+        <div className="flex items-center justify-between gap-3 bg-[#352316] border border-[#81502B] text-[#FFF0CF] p-3.5 rounded-2xl shadow-xs">
           <div className="flex items-center gap-3">
             {onBack && (
               <button
                 id="faq-back-btn"
+                type="button"
                 onClick={onBack}
-                className="w-8 h-8 rounded-xl bg-white/15 hover:bg-white/25 flex items-center justify-center text-white transition-colors cursor-pointer shrink-0"
+                className="w-8 h-8 rounded-xl bg-[#442C1B] hover:bg-[#352316] border border-[#81502B] hover:border-[#FFAA24]/60 flex items-center justify-center text-[#FFF0CF] transition-colors cursor-pointer shrink-0"
                 title="Go Back"
+                aria-label="Go Back"
               >
                 <ArrowLeft className="w-4 h-4 stroke-[2.5]" />
               </button>
             )}
             <div className="flex items-center gap-2">
-              <HelpCircle className="w-5 h-5 text-amber-300 shrink-0" />
-              <h1 className="text-base font-black tracking-tight">FAQ</h1>
+              <HelpCircle className="w-5 h-5 text-[#FFD35A] shrink-0" />
+              <h1 className="text-base font-black tracking-tight text-[#FFF0CF]">FAQ</h1>
             </div>
           </div>
+          <span className="text-[11px] font-bold text-[#E6C8A4] bg-[#442C1B] px-2.5 py-0.5 rounded-full border border-[#81502B]">
+            {TELEPLUS_FAQ_ITEMS.length} Questions
+          </span>
         </div>
       )}
 
       {/* 2. Quick Search & Controls */}
-      <div className="space-y-2.5 mb-4">
+      <div className="space-y-2.5">
         <div className="relative">
-          <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+          <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-[#E6C8A4]" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search questions or topics..."
-            className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-medium text-[#17202A] placeholder:text-slate-400 focus:outline-none focus:border-[#1688C9]"
+            className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-[#352316] border border-[#81502B] text-xs font-medium text-[#FFF0CF] placeholder:text-[#E6C8A4]/60 focus:outline-none focus:border-[#FFAA24]"
           />
         </div>
 
-        <div className="flex items-center justify-between text-[11px] text-slate-500 px-1">
+        <div className="flex items-center justify-between text-[11px] text-[#E6C8A4] px-1">
           <span>Click any question to view answer</span>
           <div className="flex items-center gap-3">
             <button
               onClick={expandAll}
-              className="text-[#1688C9] hover:underline font-bold cursor-pointer"
+              className="text-[#FFD35A] hover:underline font-bold cursor-pointer"
             >
               Expand All
             </button>
             <span>•</span>
             <button
               onClick={collapseAll}
-              className="text-slate-500 hover:underline font-bold cursor-pointer"
+              className="text-[#E6C8A4] hover:underline font-bold cursor-pointer"
             >
               Collapse All
             </button>
@@ -108,10 +113,10 @@ export const FAQPage: React.FC<FAQPageProps> = ({ onBack, showHeader = true }) =
         </div>
       </div>
 
-      {/* 3. Accordion List */}
+      {/* 3. Accordion List of FAQ Items */}
       <div className="space-y-2.5">
         {filteredItems.length === 0 ? (
-          <div className="p-8 text-center bg-slate-50 rounded-2xl border border-slate-200 text-slate-500 text-xs">
+          <div className="p-8 text-center bg-[#352316] rounded-2xl border border-[#81502B] text-[#E6C8A4] text-xs">
             No questions matched your search query.
           </div>
         ) : (
@@ -123,8 +128,8 @@ export const FAQPage: React.FC<FAQPageProps> = ({ onBack, showHeader = true }) =
                 id={`faq-item-${item.id}`}
                 className={`rounded-2xl border transition-all duration-200 overflow-hidden ${
                   isOpen
-                    ? 'bg-white border-[#1688C9]/40 shadow-xs'
-                    : 'bg-white border-slate-200 hover:border-slate-300 shadow-2xs'
+                    ? 'bg-[#352316] border-[#FFAA24]/70 shadow-md'
+                    : 'bg-[#352316] border-[#81502B] hover:border-[#FFAA24]/40 shadow-xs'
                 }`}
               >
                 {/* Accordion Row Header */}
@@ -135,12 +140,12 @@ export const FAQPage: React.FC<FAQPageProps> = ({ onBack, showHeader = true }) =
                   aria-expanded={isOpen}
                 >
                   <div className="flex items-start gap-2.5 flex-1 min-w-0">
-                    <span className="text-[10px] font-black font-mono text-[#1688C9] mt-0.5 shrink-0 px-1.5 py-0.5 rounded bg-blue-50">
+                    <span className="text-[10px] font-black font-mono text-[#FFD35A] mt-0.5 shrink-0 px-1.5 py-0.5 rounded bg-[#442C1B] border border-[#81502B]">
                       Q{index + 1}
                     </span>
                     <span
                       className={`text-xs sm:text-sm font-black leading-snug transition-colors ${
-                        isOpen ? 'text-[#1688C9]' : 'text-[#17202A] group-hover:text-[#1688C9]'
+                        isOpen ? 'text-[#FFD35A]' : 'text-[#FFF0CF] group-hover:text-[#FFD35A]'
                       }`}
                     >
                       {item.question}
@@ -151,8 +156,8 @@ export const FAQPage: React.FC<FAQPageProps> = ({ onBack, showHeader = true }) =
                   <div
                     className={`w-6 h-6 rounded-lg flex items-center justify-center shrink-0 transition-colors ${
                       isOpen
-                        ? 'bg-[#1688C9] text-white'
-                        : 'bg-slate-100 text-slate-600 group-hover:bg-slate-200'
+                        ? 'bg-gradient-to-r from-[#FFAA24] to-[#F47B20] text-[#24170F]'
+                        : 'bg-[#442C1B] text-[#E6C8A4] group-hover:bg-[#523521]'
                     }`}
                   >
                     {isOpen ? (
@@ -165,8 +170,8 @@ export const FAQPage: React.FC<FAQPageProps> = ({ onBack, showHeader = true }) =
 
                 {/* Expanded Answer Content */}
                 {isOpen && (
-                  <div className="px-4 pb-4 pt-2 border-t border-slate-100 bg-slate-50/60 animate-in fade-in slide-in-from-top-1 duration-150">
-                    <div className="text-xs text-slate-700 leading-relaxed whitespace-pre-line pl-7">
+                  <div className="px-4 pb-4 pt-2.5 border-t border-[#81502B]/60 bg-[#2B1B10]/90 animate-in fade-in slide-in-from-top-1 duration-150">
+                    <div className="text-xs text-[#E6C8A4] leading-relaxed whitespace-pre-line pl-7">
                       {item.answer}
                     </div>
                   </div>
@@ -176,6 +181,9 @@ export const FAQPage: React.FC<FAQPageProps> = ({ onBack, showHeader = true }) =
           })
         )}
       </div>
+
     </div>
   );
 };
+
+export default FAQPage;

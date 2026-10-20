@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # ==============================================================================
 # GoDigital — Enterprise Production Deployment Engine (Telebirr Game Center)
-# Target: GCP Compute Engine VM (innoserver-serv001: 34.41.116.217)
+# Target: GCP Compute Engine VM (innoserver-serv001: 35.223.254.218)
 # Ports: Web: 3700 | API: 3702 | Admin: 3703 | DB: 5442 | Valkey: 6392
 # ==============================================================================
 set -Eeuo pipefail
@@ -50,6 +50,16 @@ for seed in db/seeds/*.sql; do
     docker compose -f docker-compose.server.yml exec -T postgres psql -U ${POSTGRES_USER:-godigital_user} -d ${POSTGRES_DB:-godigital_db} -f - < "$seed" || true
   fi
 done
+
+echo "🔄 [FRESH START RESET] Resetting all player, score, and telemetry data to 0..."
+if [ -f "db/scripts/reset_fresh_data.sql" ]; then
+  docker compose -f docker-compose.server.yml exec -T postgres psql -U ${POSTGRES_USER:-godigital_user} -d ${POSTGRES_DB:-godigital_db} -f - < db/scripts/reset_fresh_data.sql || true
+  echo "✅ PostgreSQL player, tournament, and score records reset to 0."
+fi
+
+echo "🧹 Flushing Valkey/Redis cache..."
+docker compose -f docker-compose.server.yml exec -T valkey valkey-cli FLUSHALL || true
+echo "✅ Valkey/Redis cache flushed."
 
 docker compose -f docker-compose.server.yml build api
 docker compose -f docker-compose.server.yml up -d api

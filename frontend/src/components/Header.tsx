@@ -1,96 +1,97 @@
 /**
- * GameON Tele - Native telebirr SuperApp Mini-App Header
- * 
- * Strict Layout Rules:
- * - NO EthioTelecom corporate logo in header.
- * - Left: telebirr SuperApp indicator ("telebirr Game Center")
- * - Center: "GAMEON TELE" brand wordmark
- * - Right: Coin balance chip (`🪙 50`) + "BUY COINS" / Add action
+ * GoDigital - Header Component
+ * Conforming to reference design & warm sunset palette:
+ * - Left: Menu toggle + GoDigital Golden Crown & Brand Wordmark
+ * - Right: Coin balance pill with gold coin, notification indicator with warm amber badge
+ * - Palette: Deep warm brown #24170F with bronze border #81502B and rich sunset amber #FFAA24 / #FFD35A
  */
 
 import React from 'react';
 import { UserProfile } from '../types';
-import { Menu, Plus } from 'lucide-react';
-import { GoPlayLogo } from './GoPlayLogo';
+import { Menu, Plus, Bell } from 'lucide-react';
+import { GoDigitalLogo } from './GoDigitalLogo';
 
 interface HeaderProps {
   profile?: UserProfile;
+  unreadNotificationsCount?: number;
   onOpenBuyCoins: () => void;
   onOpenMenu?: () => void;
+  onOpenNotifications?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
   profile,
+  unreadNotificationsCount = 0,
   onOpenBuyCoins,
   onOpenMenu,
+  onOpenNotifications,
 }) => {
-  const coinsCount = profile?.coins ?? 50;
+  const coinsCount = profile?.coins ?? 2450;
 
   return (
-    <header className="sticky top-0 z-40 w-full bg-[#121622]/95 backdrop-blur-md border-b border-[#282E3D] shadow-[0_4px_16px_rgba(0,0,0,0.3)] select-none">
-      <div className="max-w-md md:max-w-xl lg:max-w-3xl mx-auto px-3 sm:px-4 py-2.5 sm:py-3 flex items-center justify-between gap-2 min-h-[58px]">
+    <header className="sticky top-0 z-40 w-full bg-[#24170F]/95 backdrop-blur-md border-b border-[#81502B]/60 shadow-[0_4px_24px_rgba(36,23,15,0.75)] select-none">
+      <div className="max-w-md md:max-w-xl lg:max-w-4xl mx-auto px-3.5 sm:px-4 py-2.5 sm:py-3 flex items-center justify-between gap-3 min-h-[60px]">
         
-        {/* 1. LEFT: Menu button & telebirr Mini-App Brand Indicator */}
-        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+        {/* 1. LEFT: Menu Toggle & Official GoDigital Brand Wordmark */}
+        <div className="flex items-center gap-2 shrink-0">
           {onOpenMenu && (
             <button
               id="header-main-menu-btn"
               type="button"
               onClick={onOpenMenu}
-              aria-label="Open GoPlay Menu"
-              className="p-1.5 rounded-xl text-white hover:bg-[#202536] active:scale-95 transition-colors cursor-pointer border border-transparent hover:border-[#282E3D]"
+              aria-label="Open GoDigital Menu"
+              className="p-1.5 sm:p-2 rounded-xl bg-[#352316] text-[#E6C8A4] hover:text-[#FFF0CF] hover:border-[#FFAA24]/60 active:scale-95 transition-all cursor-pointer border border-[#81502B] shadow-xs"
               title="Menu"
             >
-              <Menu className="w-5 h-5 stroke-[2.2]" />
+              <Menu className="w-4.5 h-4.5 sm:w-5 sm:h-5 stroke-[2.2]" />
             </button>
           )}
 
-          {/* telebirr mini-app badge */}
           <div 
-            id="header-telebirr-chip"
-            className="flex items-center gap-1.5 px-2 py-1 rounded-xl bg-[#202536] border border-[#282E3D] text-[#AEB6C7] cursor-pointer hover:bg-[#282E3D] transition-colors"
-            title="telebirr SuperApp Game Center"
+            id="header-godigital-brand"
+            className="flex items-center cursor-pointer transition-transform active:scale-98"
             onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+            title="GoDigital Portal"
           >
-            <div className="w-5 h-5 rounded-lg bg-[#7C3AED] text-white font-black text-[11px] flex items-center justify-center leading-none shadow-xs">
-              tb
-            </div>
-            <div className="hidden xs:flex flex-col text-left leading-tight">
-              <span className="text-[9px] font-black tracking-tight text-[#22D3EE] uppercase">
-                telebirr
-              </span>
-              <span className="text-[8px] font-semibold text-[#AEB6C7] -mt-0.5">
-                Game Center
-              </span>
-            </div>
+            <GoDigitalLogo size="sm" />
           </div>
         </div>
 
-        {/* 2. CENTER: GoPlay Visual Identity */}
-        <div 
-          id="header-goplay-brand"
-          className="flex items-center justify-center text-center cursor-pointer px-1 shrink-0 transition-transform active:scale-98"
-          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-          title="GoPlay"
-        >
-          <GoPlayLogo size="sm" variant="dark" />
-        </div>
-
-        {/* 3. RIGHT: Coins Balance Chip & Instant Topup */}
-        <div className="flex items-center gap-2 shrink-0">
+        {/* 2. RIGHT: Coin Balance Pill & Interactive Notification Bell */}
+        <div className="flex items-center gap-2 sm:gap-2.5 shrink-0">
+          {/* Coin Balance Pill (clickable for instant top-up) */}
           <button
             id="header-buy-coins-btn"
             type="button"
             onClick={onOpenBuyCoins}
-            aria-label="Buy Coins"
-            className="group flex items-center gap-1.5 px-2.5 sm:px-3 h-[32px] sm:h-[34px] rounded-full bg-[#202536] hover:bg-[#282E3D] border border-[#282E3D] text-white font-black text-[11px] sm:text-xs transition-all shadow-xs cursor-pointer active:scale-95"
-            title="Buy GoPlay Coins"
+            aria-label="Buy GoDigital Coins"
+            className="group flex items-center gap-1.5 px-2.5 sm:px-3 h-[34px] sm:h-[36px] rounded-full bg-[#352316] hover:bg-[#442C1B] border border-[#81502B] hover:border-[#FFAA24]/70 text-[#FFF0CF] font-black text-xs sm:text-sm transition-all shadow-xs cursor-pointer active:scale-95"
+            title="GoDigital Coins Wallet"
           >
-            <span className="text-sm text-[#F5B942]">🪙</span>
-            <span className="font-black text-white">{coinsCount}</span>
-            <div className="w-4 h-4 rounded-full bg-[#7C3AED] text-white flex items-center justify-center ml-0.5 group-hover:scale-110 group-hover:bg-[#6D28D9] transition-transform shadow-xs">
+            <span className="text-sm">🪙</span>
+            <span className="font-mono font-black text-[#FFF0CF] tracking-tight">
+              {coinsCount.toLocaleString()}
+            </span>
+            <div className="w-4 h-4 rounded-full bg-gradient-to-r from-[#FFAA24] to-[#F47B20] text-[#24170F] flex items-center justify-center ml-0.5 group-hover:scale-110 transition-transform shadow-xs">
               <Plus className="w-3 h-3 stroke-[3]" />
             </div>
+          </button>
+
+          {/* Interactive Notification Bell with Live Unread Badge */}
+          <button 
+            id="header-notifications-btn"
+            type="button"
+            onClick={onOpenNotifications}
+            aria-label={`Notifications${unreadNotificationsCount > 0 ? ` (${unreadNotificationsCount} unread)` : ''}`}
+            className="relative w-[34px] sm:w-[36px] h-[34px] sm:h-[36px] rounded-full bg-[#352316] hover:bg-[#442C1B] border border-[#81502B] hover:border-[#FFAA24]/70 flex items-center justify-center text-[#E6C8A4] hover:text-[#FFAA24] cursor-pointer transition-all shadow-xs active:scale-95"
+            title="Notifications"
+          >
+            <Bell className="w-4 h-4 stroke-[2]" />
+            {unreadNotificationsCount > 0 && (
+              <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-gradient-to-r from-[#FFAA24] to-[#F47B20] text-[#24170F] text-[10px] font-black flex items-center justify-center ring-2 ring-[#24170F] shadow-sm animate-pulse">
+                {unreadNotificationsCount > 9 ? '9+' : unreadNotificationsCount}
+              </span>
+            )}
           </button>
         </div>
 
@@ -98,3 +99,5 @@ export const Header: React.FC<HeaderProps> = ({
     </header>
   );
 };
+
+export default Header;

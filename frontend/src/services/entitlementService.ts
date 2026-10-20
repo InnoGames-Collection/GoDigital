@@ -42,11 +42,6 @@ export const EntitlementService = {
     game: CatalogGame,
     profile?: UserProfile
   ): { hasAccess: boolean; entitlement?: GameEntitlement; isExpired?: boolean } {
-    // 0. Candy Crush and Word Legend are completely free with zero coin requirement
-    if (game.gameId !== 'helix-jump') {
-      return { hasAccess: true };
-    }
-
     // 1. FREE games always have instant access
     if (game.isFree || game.accessType === 'FREE' || !game.requiresCoins) {
       return { hasAccess: true };

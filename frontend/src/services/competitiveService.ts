@@ -29,36 +29,32 @@ const STORAGE_KEYS = {
   GAME_LEADERBOARDS: 'teleplay_ethio_game_lbs_v1',
 };
 
-// Contenders using strictly 5-digit masked MSISDNs without customer names (e.g. 0912*****678)
-// Scores represent UNIFIED 0-400 averages across calendar days (Commands 41-58)
-const DEMO_WEEKLY_CONTENDERS = [
-  { phone: '0911234567', masked: '0911*****567', totalPoints: 382.4, bestScoresCount: 7, timestamp: 1724500000000, reward: '50K ETB' },
-  { phone: '0912876543', masked: '0912*****543', totalPoints: 364.1, bestScoresCount: 7, timestamp: 1724510000000, reward: '40K ETB' },
-  { phone: '0913456789', masked: '0913*****789', totalPoints: 348.6, bestScoresCount: 7, timestamp: 1724520000000, reward: '35K ETB' },
-  { phone: '0914333445', masked: '0914*****445', totalPoints: 321.0, bestScoresCount: 6, timestamp: 1724530000000, reward: '30K ETB' },
-  { phone: '0915999112', masked: '0915*****112', totalPoints: 298.3, bestScoresCount: 6, timestamp: 1724540000000, reward: '25K ETB' },
-  { phone: '0916888776', masked: '0916*****776', totalPoints: 265.7, bestScoresCount: 6, timestamp: 1724550000000, reward: '20K ETB' },
-  { phone: '0917222334', masked: '0917*****334', totalPoints: 228.4, bestScoresCount: 5, timestamp: 1724560000000, reward: '15K ETB' },
-  { phone: '0918555443', masked: '0918*****443', totalPoints: 189.1, bestScoresCount: 5, timestamp: 1724570000000, reward: '10K ETB' },
-  { phone: '0919777889', masked: '0919*****889', totalPoints: 142.5, bestScoresCount: 4, timestamp: 1724580000000, reward: '5K ETB' },
-  { phone: '0920111223', masked: '0920*****223', totalPoints: 96.0, bestScoresCount: 3, timestamp: 1724590000000, reward: '3K ETB' },
+import { apiService } from './apiService';
+
+let serverWeeklyCache: { timestamp: number; entries: LeaderboardEntry[]; totalContenders: number } | null = null;
+let serverMonthlyCache: { timestamp: number; entries: LeaderboardEntry[]; totalContenders: number } | null = null;
+let isFetchingWeekly = false;
+let isFetchingMonthly = false;
+
+// Baseline Canonical Contenders matching PostgreSQL seeds
+const CANONICAL_WEEKLY_CONTENDERS = [
+  { phone: '0911998890', masked: '0911*****890', totalPoints: 382.4, bestScoresCount: 7, timestamp: 1724500000000, reward: '50K ETB' },
+  { phone: '0922334412', masked: '0922*****412', totalPoints: 364.1, bestScoresCount: 7, timestamp: 1724510000000, reward: '40K ETB' },
+  { phone: '0933445589', masked: '0933*****589', totalPoints: 348.6, bestScoresCount: 7, timestamp: 1724520000000, reward: '35K ETB' },
+  { phone: '0944556633', masked: '0944*****633', totalPoints: 321.0, bestScoresCount: 6, timestamp: 1724530000000, reward: '30K ETB' },
+  { phone: '0955667744', masked: '0955*****744', totalPoints: 298.3, bestScoresCount: 6, timestamp: 1724540000000, reward: '25K ETB' },
 ];
 
-const DEMO_MONTHLY_CONTENDERS = [
-  { phone: '0911987654', masked: '0911*****654', totalPoints: 389.2, bestScoresCount: 30, timestamp: 1724400000000, reward: '50K ETB' },
-  { phone: '0912123987', masked: '0912*****987', totalPoints: 371.5, bestScoresCount: 30, timestamp: 1724410000000, reward: '40K ETB' },
-  { phone: '0913654321', masked: '0913*****321', totalPoints: 352.0, bestScoresCount: 29, timestamp: 1724420000000, reward: '35K ETB' },
-  { phone: '0914789012', masked: '0914*****012', totalPoints: 328.4, bestScoresCount: 28, timestamp: 1724430000000, reward: '30K ETB' },
-  { phone: '0915345678', masked: '0915*****678', totalPoints: 305.1, bestScoresCount: 28, timestamp: 1724440000000, reward: '25K ETB' },
-  { phone: '0916901234', masked: '0916*****234', totalPoints: 272.8, bestScoresCount: 26, timestamp: 1724450000000, reward: '20K ETB' },
-  { phone: '0917567890', masked: '0917*****890', totalPoints: 235.0, bestScoresCount: 24, timestamp: 1724460000000, reward: '15K ETB' },
-  { phone: '0918123456', masked: '0918*****456', totalPoints: 194.2, bestScoresCount: 22, timestamp: 1724470000000, reward: '10K ETB' },
-  { phone: '0919234567', masked: '0919*****567', totalPoints: 151.7, bestScoresCount: 19, timestamp: 1724480000000, reward: '5K ETB' },
-  { phone: '0920345678', masked: '0920*****678', totalPoints: 108.3, bestScoresCount: 15, timestamp: 1724490000000, reward: '3K ETB' },
+const CANONICAL_MONTHLY_CONTENDERS = [
+  { phone: '0911998890', masked: '0911*****890', totalPoints: 389.2, bestScoresCount: 30, timestamp: 1724400000000, reward: '50K ETB' },
+  { phone: '0922334412', masked: '0922*****412', totalPoints: 371.5, bestScoresCount: 30, timestamp: 1724410000000, reward: '40K ETB' },
+  { phone: '0933445589', masked: '0933*****589', totalPoints: 352.0, bestScoresCount: 29, timestamp: 1724420000000, reward: '35K ETB' },
+  { phone: '0944556633', masked: '0944*****633', totalPoints: 328.4, bestScoresCount: 28, timestamp: 1724430000000, reward: '30K ETB' },
+  { phone: '0955667744', masked: '0955*****744', totalPoints: 305.1, bestScoresCount: 28, timestamp: 1724440000000, reward: '25K ETB' },
 ];
 
-export const WEEKLY_GAME_IDS = ['candy-blast', 'color-rush', 'world-legends'];
-export const MONTHLY_GAME_IDS = ['pop-piano', 'hill-rider', 'pop-balloon'];
+export const WEEKLY_GAME_IDS = ['helix-jump', 'color-rush', 'puzzle-block'];
+export const MONTHLY_GAME_IDS = ['hill-rider', 'bubble-shooter', 'solitaire'];
 
 /**
  * Returns the highest score on a given date among the specified eligible games.
@@ -203,141 +199,27 @@ const PERIOD_REWARDS: Record<LeaderboardPeriod, (rank: number) => string> = {
  * Demo baseline tournaments covering Daily, Weekly, Monthly across all 6 games
  */
 export const DEFAULT_TOURNAMENTS: Tournament[] = [
-  // 1. Weekly Tournaments (Candy Crush, Color Rush, Word Legend)
   {
-    id: 'tourney_weekly_candy_cup',
-    title: 'Candy Crush Walia Weekend Cup',
-    gameId: 'candy-blast',
-    gameTitle: 'Candy Crush',
+    id: 'tourn_helix_jump_01',
+    title: 'Helix Tower Grand Prix',
+    gameId: 'helix-jump',
+    gameTitle: 'Helix Jump',
     cycle: 'weekly',
-    bannerImage: getGameArtworkUrl('candy-blast'),
-    prizePoolETB: 15000,
-    prizePoolCoins: 80000,
-    entryFeeEnergy: 1,
-    entryRequirement: 'Open to All Players',
-    startDate: 'Monday, Aug 25',
-    endDate: 'Sunday, Aug 31',
-    status: 'Live',
-    participantsCount: 14890,
-    sponsor: 'EthioTelecom Gaming Cup',
-    prizes: [
-      { rank: '1st Place', reward: '7,500 ETB Cash Prize', telebirrETB: 7500 },
-      { rank: '2nd Place', reward: '4,500 ETB Cash Prize', telebirrETB: 4500 },
-      { rank: '3rd Place', reward: '2,000 ETB Airtime Voucher', telebirrETB: 2000 },
-      { rank: '4th - 20th', reward: '100 ETB Airtime Voucher', telebirrETB: 100 },
-    ],
-  },
-  {
-    id: 'tourney_weekly_color_rush',
-    title: 'Color Rush Sprint Cup',
-    gameId: 'color-rush',
-    gameTitle: 'Color Rush',
-    cycle: 'weekly',
-    bannerImage: getGameArtworkUrl('color-rush'),
-    prizePoolETB: 12000,
-    prizePoolCoins: 60000,
-    entryFeeEnergy: 1,
-    entryRequirement: 'Open to All Players',
-    startDate: 'Monday, Aug 25',
-    endDate: 'Sunday, Aug 31',
-    status: 'Live',
-    participantsCount: 11420,
-    sponsor: 'EthioTelecom Youth Pack',
-    prizes: [
-      { rank: '1st Place', reward: '6,000 ETB Airtime Voucher', telebirrETB: 6000 },
-      { rank: '2nd Place', reward: '3,500 ETB Airtime Voucher', telebirrETB: 3500 },
-      { rank: '3rd Place', reward: '1,500 ETB Airtime Recharge', telebirrETB: 1500 },
-    ],
-  },
-  {
-    id: 'tourney_weekly_world_legends',
-    title: 'Word Legend Heritage Challenge',
-    gameId: 'world-legends',
-    gameTitle: 'Word Legend',
-    cycle: 'weekly',
-    bannerImage: getGameArtworkUrl('world-legends'),
-    prizePoolETB: 18000,
-    prizePoolCoins: 90000,
-    entryFeeEnergy: 1,
-    entryRequirement: 'Open to All Players',
-    startDate: 'Monday, Aug 25',
-    endDate: 'Sunday, Aug 31',
-    status: 'Live',
-    participantsCount: 9340,
-    sponsor: 'EthioTelecom Digital Services',
-    prizes: [
-      { rank: '1st Place', reward: '8,000 ETB Grand Cash Prize', telebirrETB: 8000 },
-      { rank: '2nd Place', reward: '5,000 ETB Cash Prize', telebirrETB: 5000 },
-      { rank: '3rd Place', reward: '2,500 ETB Airtime Voucher', telebirrETB: 2500 },
-    ],
-  },
-
-  // 2. Monthly Tournaments (Pop Piano, Hill Climb, Pop Ballon)
-  {
-    id: 'tourney_monthly_piano',
-    title: 'Pop Piano Grand Virtuoso',
-    gameId: 'pop-piano',
-    gameTitle: 'Pop Piano',
-    cycle: 'monthly',
-    bannerImage: getGameArtworkUrl('pop-piano'),
-    prizePoolETB: 40000,
-    prizePoolCoins: 200000,
-    entryFeeEnergy: 1,
-    entryRequirement: 'Open to All Players',
-    startDate: 'Aug 1, 2026',
-    endDate: 'Aug 31, 2026',
-    status: 'Live',
-    participantsCount: 16800,
-    sponsor: 'EthioTelecom Music Pass',
-    prizes: [
-      { rank: '1st Place', reward: '20,000 ETB Cash Prize + 3 Mo 5G', telebirrETB: 20000 },
-      { rank: '2nd Place', reward: '12,000 ETB Cash Prize', telebirrETB: 12000 },
-      { rank: '3rd Place', reward: '5,000 ETB Airtime Voucher', telebirrETB: 5000 },
-    ],
-  },
-  {
-    id: 'tourney_monthly_hill_summit',
-    title: 'Hill Climb Highland Summit Championship',
-    gameId: 'hill-rider',
-    gameTitle: 'Hill Climb',
-    cycle: 'monthly',
-    bannerImage: getGameArtworkUrl('hill-rider'),
-    prizePoolETB: 50000,
-    prizePoolCoins: 250000,
+    bannerImage: getGameArtworkUrl('helix-jump'),
+    prizePoolETB: 25000,
+    prizePoolCoins: 100000,
     entryFeeEnergy: 2,
-    entryRequirement: 'Open to All Players (2 Energy)',
-    startDate: 'Aug 1, 2026',
-    endDate: 'Aug 31, 2026',
+    entryRequirement: '2 Coins Entry',
+    startDate: 'Monday, 00:00 EAT',
+    endDate: 'Sunday, 23:59 EAT',
     status: 'Live',
-    participantsCount: 22450,
-    sponsor: 'EthioTelecom 5G Ultra',
+    participantsCount: 5,
+    sponsor: 'TeleBirr & EthioTelecom',
     prizes: [
-      { rank: '1st Place', reward: '25,000 ETB Grand Prize + 6 Mo 5G Unlimited', telebirrETB: 25000 },
-      { rank: '2nd Place', reward: '15,000 ETB Grand Prize + 3 Mo 5G Unlimited', telebirrETB: 15000 },
-      { rank: '3rd Place', reward: '7,000 ETB Prize + 1 Mo 5G Unlimited', telebirrETB: 7000 },
-      { rank: '4th - 50th', reward: '300 ETB Airtime Voucher', telebirrETB: 300 },
-    ],
-  },
-  {
-    id: 'tourney_monthly_pop_balloon',
-    title: 'Pop Ballon National Championship',
-    gameId: 'archery-strike',
-    gameTitle: 'Pop Ballon',
-    cycle: 'monthly',
-    bannerImage: getGameArtworkUrl('archery-strike'),
-    prizePoolETB: 35000,
-    prizePoolCoins: 180000,
-    entryFeeEnergy: 1,
-    entryRequirement: 'Open to All Players',
-    startDate: 'Aug 1, 2026',
-    endDate: 'Aug 31, 2026',
-    status: 'Live',
-    participantsCount: 18200,
-    sponsor: 'EthioTelecom 5G Network',
-    prizes: [
-      { rank: '1st Place', reward: '18,000 ETB Grand Cash Prize', telebirrETB: 18000 },
-      { rank: '2nd Place', reward: '10,000 ETB Cash Prize', telebirrETB: 10000 },
-      { rank: '3rd Place', reward: '5,000 ETB Airtime Voucher', telebirrETB: 5000 },
+      { rank: '1st Place', reward: '10,000 ETB Cash Prize', telebirrETB: 10000 },
+      { rank: '2nd Place', reward: '6,000 ETB Cash Prize', telebirrETB: 6000 },
+      { rank: '3rd Place', reward: '3,000 ETB Cash Prize', telebirrETB: 3000 },
+      { rank: '4th - 5th', reward: '1,000 ETB Airtime Voucher', telebirrETB: 1000 },
     ],
   },
 ];
@@ -472,6 +354,49 @@ export const CompetitiveService = {
    * 2. Higher number of best scores
    * 3. Earliest achievement timestamp
    */
+  /**
+   * Synchronize weekly or monthly leaderboards with PostgreSQL backend
+   */
+  async syncLeaderboard(period: 'weekly' | 'monthly'): Promise<LeaderboardEntry[]> {
+    if (period === 'weekly') {
+      if (isFetchingWeekly) return serverWeeklyCache?.entries || [];
+      isFetchingWeekly = true;
+      try {
+        const res = await apiService.getWeeklyLeaderboard();
+        if (res && Array.isArray(res.entries)) {
+          serverWeeklyCache = { timestamp: Date.now(), entries: res.entries, totalContenders: res.totalContenders || res.entries.length };
+          return res.entries;
+        }
+      } catch (e) {
+        console.warn('[CompetitiveService] Failed to fetch weekly leaderboard:', e);
+      } finally {
+        isFetchingWeekly = false;
+      }
+      return serverWeeklyCache?.entries || [];
+    } else {
+      if (isFetchingMonthly) return serverMonthlyCache?.entries || [];
+      isFetchingMonthly = true;
+      try {
+        const res = await apiService.getMonthlyLeaderboard();
+        if (res && Array.isArray(res.entries)) {
+          serverMonthlyCache = { timestamp: Date.now(), entries: res.entries, totalContenders: res.totalContenders || res.entries.length };
+          return res.entries;
+        }
+      } catch (e) {
+        console.warn('[CompetitiveService] Failed to fetch monthly leaderboard:', e);
+      } finally {
+        isFetchingMonthly = false;
+      }
+      return serverMonthlyCache?.entries || [];
+    }
+  },
+
+  /**
+   * Generates Top 10 leaderboards with deterministic ranking:
+   * 1. Total tournament points (max 1200, max 400 per game)
+   * 2. Higher number of best scores
+   * 3. Earliest achievement timestamp
+   */
   getLeaderboard(
     period: 'weekly' | 'monthly',
     profile: UserProfile
@@ -482,7 +407,12 @@ export const CompetitiveService = {
     totalContenders: number;
   } {
     const isWeekly = period === 'weekly';
-    const contenders = isWeekly ? DEMO_WEEKLY_CONTENDERS : DEMO_MONTHLY_CONTENDERS;
+    const cache = isWeekly ? serverWeeklyCache : serverMonthlyCache;
+    if (!cache || Date.now() - cache.timestamp > 15000) {
+      this.syncLeaderboard(period);
+    }
+
+    const contenders = isWeekly ? CANONICAL_WEEKLY_CONTENDERS : CANONICAL_MONTHLY_CONTENDERS;
     const gameIds = isWeekly ? WEEKLY_GAME_IDS : MONTHLY_GAME_IDS;
 
     // Calculate user's total points and number of valid scored games
@@ -504,15 +434,25 @@ export const CompetitiveService = {
       defaultReward?: string;
     }
 
-    const candidateList: RankCandidate[] = contenders.map((c, idx) => ({
-      userId: `contender_${isWeekly ? 'w' : 'm'}_${idx + 1}`,
-      phoneNumberMasked: c.masked,
-      totalPoints: c.totalPoints,
-      bestScoresCount: c.bestScoresCount,
-      timestamp: c.timestamp,
-      isCurrentUser: false,
-      defaultReward: c.reward,
-    }));
+    const candidateList: RankCandidate[] = cache && cache.entries.length > 0
+      ? cache.entries.map((e, idx) => ({
+          userId: e.userId || `contender_${idx + 1}`,
+          phoneNumberMasked: e.phoneNumberMasked || '091*****890',
+          totalPoints: Number(e.score) || 0,
+          bestScoresCount: 5,
+          timestamp: Date.now() - (idx * 3600000),
+          isCurrentUser: false,
+          defaultReward: e.reward,
+        }))
+      : contenders.map((c, idx) => ({
+          userId: `contender_${isWeekly ? 'w' : 'm'}_${idx + 1}`,
+          phoneNumberMasked: c.masked,
+          totalPoints: c.totalPoints,
+          bestScoresCount: c.bestScoresCount,
+          timestamp: c.timestamp,
+          isCurrentUser: false,
+          defaultReward: c.reward,
+        }));
 
     // Include authenticated user if they have scored at least 1 point or have registered session
     if (userTotalPoints > 0) {
@@ -580,7 +520,7 @@ export const CompetitiveService = {
       entries,
       userRank,
       userTotalPoints,
-      totalContenders: isWeekly ? 14250 : 28900,
+      totalContenders: cache?.totalContenders || candidateList.length,
     };
   },
 

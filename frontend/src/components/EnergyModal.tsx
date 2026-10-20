@@ -67,18 +67,18 @@ export const EnergyModal: React.FC<EnergyModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in select-none">
+    <div className="fixed inset-0 z-50 bg-[#24170F]/85 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in select-none">
       <div 
         id="buy-coins-sheet"
-        className="w-full max-w-sm bg-white text-[#17202A] rounded-t-2xl sm:rounded-2xl border border-slate-200 shadow-2xl p-5 relative"
+        className="w-full max-w-sm bg-[#352316] text-[#FFF0CF] rounded-t-2xl sm:rounded-2xl border border-[#81502B] shadow-2xl p-5 relative"
       >
         {/* Header */}
-        <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+        <div className="flex items-center justify-between pb-3 border-b border-[#81502B]">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-xl bg-[#8BCB3D] text-white flex items-center justify-center shadow-xs">
+            <div className="w-8 h-8 rounded-xl bg-gradient-to-r from-[#FFD35A] to-[#FFAA24] text-[#24170F] flex items-center justify-center shadow-xs">
               <CoinsIcon className="w-4 h-4 fill-current" />
             </div>
-            <h3 className="text-base font-black text-[#17202A] uppercase tracking-wide">
+            <h3 className="text-base font-black text-[#FFF0CF] uppercase tracking-wide">
               BUY COINS
             </h3>
           </div>
@@ -86,7 +86,7 @@ export const EnergyModal: React.FC<EnergyModalProps> = ({
           <button
             id="close-buy-coins-btn"
             onClick={onClose}
-            className="p-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-[#17202A] transition-colors cursor-pointer"
+            className="p-1.5 rounded-xl bg-[#442C1B] hover:bg-[#523521] border border-[#81502B] text-[#FFF0CF] transition-colors cursor-pointer"
           >
             <X className="w-4 h-4 stroke-[2.5]" />
           </button>
@@ -103,25 +103,25 @@ export const EnergyModal: React.FC<EnergyModalProps> = ({
                 onClick={() => setSelectedPkg(pkg)}
                 className={`w-full p-3.5 rounded-xl border transition-all duration-150 flex items-center justify-between cursor-pointer ${
                   isSelected
-                    ? 'bg-blue-50/50 border-[#1688C9] ring-2 ring-[#1688C9]/30 shadow-xs'
-                    : 'bg-white border-slate-200 hover:border-slate-300'
+                    ? 'bg-[#442C1B] border-[#FFAA24] ring-1 ring-[#FFAA24] shadow-md'
+                    : 'bg-[#24170F]/80 border-[#81502B] hover:border-[#FFAA24]/40'
                 }`}
               >
                 {/* Left: Price */}
                 <div className="flex items-center gap-2.5">
                   <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-black ${
-                    isSelected ? 'bg-[#1688C9] text-white' : 'bg-slate-100 text-[#17202A]'
+                    isSelected ? 'bg-gradient-to-r from-[#FFD35A] to-[#FFAA24] text-[#24170F]' : 'bg-[#352316] text-[#E6C8A4]'
                   }`}>
                     {isSelected ? <Check className="w-4 h-4 stroke-[3]" /> : <CoinsIcon className="w-4 h-4" />}
                   </div>
-                  <span className="text-sm font-black text-[#17202A] font-mono">
+                  <span className="text-sm font-black text-[#FFF0CF] font-mono">
                     {pkg.priceBirr} Birr
                   </span>
                 </div>
 
                 {/* Right: Coins */}
-                <div className="flex items-center gap-1.5 font-mono font-black text-sm text-[#1688C9]">
-                  <CoinsIcon className="w-4 h-4 text-[#8BCB3D] fill-current" />
+                <div className="flex items-center gap-1.5 font-mono font-black text-sm text-[#FFD35A]">
+                  <CoinsIcon className="w-4 h-4 text-[#FFD35A] fill-current" />
                   <span>{pkg.coins} Coins</span>
                 </div>
               </button>
@@ -133,7 +133,7 @@ export const EnergyModal: React.FC<EnergyModalProps> = ({
         <button
           id="proceed-buy-coins-btn"
           onClick={() => handleOpenConfirm(selectedPkg)}
-          className="w-full py-3 rounded-xl bg-[#8BCB3D] hover:bg-[#7cb736] active:scale-95 text-white font-black text-xs uppercase tracking-wider shadow-sm flex items-center justify-center gap-2 transition-all cursor-pointer"
+          className="w-full py-3.5 rounded-xl bg-gradient-to-r from-[#FFD35A] to-[#FFAA24] hover:opacity-95 active:scale-95 text-[#24170F] font-black text-xs uppercase tracking-wider shadow-md shadow-[#FFAA24]/20 flex items-center justify-center gap-2 transition-all cursor-pointer border-none"
         >
           <CoinsIcon className="w-4 h-4 fill-current" />
           <span>Buy {selectedPkg.coins} Coins ({selectedPkg.priceBirr} Birr)</span>
@@ -143,17 +143,17 @@ export const EnergyModal: React.FC<EnergyModalProps> = ({
             COMPACT CONFIRMATION DIALOG
            ========================================================================= */}
         {showConfirmDialog && (
-          <div className="fixed inset-0 z-60 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="fixed inset-0 z-60 bg-[#24170F]/85 backdrop-blur-xs flex items-center justify-center p-4">
             <div 
               id="coin-purchase-confirm-dialog"
-              className="w-full max-w-xs bg-white rounded-2xl p-5 border border-slate-200 shadow-2xl text-center space-y-4 animate-in zoom-in-95"
+              className="w-full max-w-xs bg-[#352316] text-[#FFF0CF] rounded-2xl p-5 border border-[#81502B] shadow-2xl text-center space-y-4 animate-in zoom-in-95"
             >
-              <div className="w-12 h-12 rounded-2xl bg-blue-50 text-[#1688C9] flex items-center justify-center mx-auto border border-blue-100">
-                <CoinsIcon className="w-6 h-6 text-[#8BCB3D] fill-current" />
+              <div className="w-12 h-12 rounded-2xl bg-gradient-to-r from-[#FFD35A] to-[#FFAA24] text-[#24170F] flex items-center justify-center mx-auto shadow-sm">
+                <CoinsIcon className="w-6 h-6 fill-current" />
               </div>
 
               <div>
-                <h4 className="text-base font-black text-[#17202A] leading-tight">
+                <h4 className="text-base font-black text-[#FFF0CF] leading-tight">
                   Buy {selectedPkg.coins} Coins for {selectedPkg.priceBirr} Birr?
                 </h4>
               </div>
@@ -163,7 +163,7 @@ export const EnergyModal: React.FC<EnergyModalProps> = ({
                   id="confirm-dialog-cancel-btn"
                   onClick={() => setShowConfirmDialog(false)}
                   disabled={isProcessing}
-                  className="py-2.5 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-[#17202A] font-bold text-xs transition-colors cursor-pointer"
+                  className="py-2.5 px-3 rounded-xl bg-[#442C1B] hover:bg-[#523521] border border-[#81502B] text-[#FFF0CF] font-bold text-xs transition-colors cursor-pointer"
                 >
                   Cancel
                 </button>
@@ -172,7 +172,7 @@ export const EnergyModal: React.FC<EnergyModalProps> = ({
                   id="confirm-dialog-confirm-btn"
                   onClick={handleConfirmPurchase}
                   disabled={isProcessing}
-                  className="py-2.5 px-3 rounded-xl bg-[#8BCB3D] hover:bg-[#7cb736] text-white font-black text-xs transition-all shadow-sm cursor-pointer disabled:opacity-50"
+                  className="py-2.5 px-3 rounded-xl bg-gradient-to-r from-[#FFD35A] to-[#FFAA24] hover:opacity-95 text-[#24170F] font-black text-xs transition-all shadow-md shadow-[#FFAA24]/20 cursor-pointer disabled:opacity-50 border-none"
                 >
                   {isProcessing ? 'Processing...' : 'Confirm'}
                 </button>

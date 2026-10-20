@@ -1,53 +1,17 @@
 /**
- * Premium Modern Gaming Portal Bottom Navigation Bar for GoPlay
- * 
- * Strict Requirements:
- * - Exactly 5 items in EXACT order:
- *   1. GAMES
- *   2. TOURNAMENT
- *   3. HOME (physically centered, elevated circular button 56-64px diameter)
- *   4. LEADERBOARD
- *   5. PROFILE
- * - Bar Background: #121622 with top border #282E3D, height ~74-78px + safe-area
- * - Central HOME button:
- *   - Circular, elevated above navigation bar
- *   - Linear gradient from #7C3AED to #22D3EE with soft controlled shadow
- *   - White Home icon (24-28px) + "HOME" label
- * - Active States:
- *   - GAMES: #22D3EE
- *   - TOURNAMENT: #F5B942 (gold)
- *   - HOME: Dominant violet-to-cyan gradient
- *   - LEADERBOARD: #22D3EE
- *   - PROFILE: #7C3AED
- *   - Inactive: #70798D
- *   - Active labels: #FFFFFF
+ * GoDigital - 3D Cinematic Bottom Navigation Bar
+ * Conforming to specification & target reference design:
+ * - 5 Tabs in exact left-to-right order: 1. Game 2. Tournament 3. Home 4. Leaderboard 5. Profile
+ * - Unified rounded capsule silhouette with warm charcoal-brown glassmorphism surface (#352316 / #24170F)
+ * - Muted bronze outer border (#81502B) with golden-orange illuminated rim highlights (#FFAA24 / #FFD35A)
+ * - Central Home tab as the visual centerpiece: raised circular medallion with golden-orange ring,
+ *   warm golden dimensional shading, winged metallic brackets, and radiant ambient glow
+ * - Professional dimensional styling for active and inactive states across mobile and desktop
  */
 
 import React from 'react';
 import { NavigationTab } from '../types';
-import { Home, Gamepad2, Trophy, User } from 'lucide-react';
-
-// Premium Tournament Championship Trophy Cup Icon
-const TournamentCupIcon: React.FC<{ className?: string }> = ({ className = '' }) => (
-  <svg 
-    viewBox="0 0 24 24" 
-    fill="none" 
-    stroke="currentColor" 
-    strokeWidth="2" 
-    strokeLinecap="round" 
-    strokeLinejoin="round" 
-    className={className}
-    aria-hidden="true"
-  >
-    <path d="M6 3h12v6c0 3.5-2.5 6-6 6s-6-2.5-6-6V3z" />
-    <path d="M6 5H4a2 2 0 0 0-2 2v1a3 3 0 0 0 3 3h1" />
-    <path d="M18 5h2a2 2 0 0 1 2 2v1a3 3 0 0 1-3 3h-1" />
-    <path d="M12 15v4" />
-    <path d="M8 21h8" />
-    <path d="M9 19h6" />
-    <path d="M12 6.8l.6 1.3 1.4.2-1 1 .3 1.4-1.3-.7-1.3.7.3-1.4-1-1 1.4-.2L12 6.8z" />
-  </svg>
-);
+import { Home, Gamepad2, Trophy, Crown, User } from 'lucide-react';
 
 interface BottomNavProps {
   activeTab: NavigationTab;
@@ -65,133 +29,264 @@ export const BottomNav: React.FC<BottomNavProps> = ({ activeTab, onTabChange, la
   const isHomeSelected = activeTab === 'home';
 
   return (
-    <nav 
+    <nav
       id="bottom-navigation-bar"
-      className="fixed bottom-0 left-0 right-0 z-40 bg-[#121622] border-t border-[#282E3D] shadow-[0_-4px_24px_rgba(0,0,0,0.5)] select-none safe-area-bottom"
+      role="navigation"
+      aria-label="Portal Navigation"
+      className="fixed bottom-0 left-0 right-0 z-40 select-none pointer-events-none pb-2 sm:pb-3 safe-area-bottom"
     >
-      <div className="max-w-md md:max-w-xl mx-auto h-[74px] sm:h-[78px] px-1.5 grid grid-cols-5 items-center relative">
-        
-        {/* 1. GAMES */}
-        <button
-          id="bottom-nav-games"
-          type="button"
-          onClick={() => onTabChange('games')}
-          className="flex flex-col items-center justify-center py-1.5 px-0.5 transition-all duration-150 cursor-pointer w-full group active:scale-95"
+      <div className="max-w-md md:max-w-xl lg:max-w-2xl mx-auto px-2.5 sm:px-4 pointer-events-auto">
+        <div 
+          role="tablist"
+          aria-label="Portal Navigation Tabs"
+          className="relative rounded-[28px] sm:rounded-[32px] bg-gradient-to-b from-[#352316]/95 via-[#2B1B10]/95 to-[#24170F]/98 backdrop-blur-xl border border-[#81502B]/80 shadow-[0_-8px_32px_rgba(24,15,10,0.85),inset_0_1px_1.5px_rgba(255,211,90,0.4),0_8px_24px_rgba(0,0,0,0.6)] h-[68px] sm:h-[72px] px-1.5 sm:px-3 grid grid-cols-5 items-center"
         >
-          <Gamepad2 
-            className={`w-5 h-5 sm:w-5.5 sm:h-5.5 shrink-0 transition-colors ${
-              activeTab === 'games' 
-                ? 'text-[#22D3EE] stroke-[2.4] drop-shadow-[0_0_8px_rgba(34,211,238,0.4)]' 
-                : 'text-[#70798D] group-hover:text-[#AEB6C7] stroke-2'
-            }`} 
-          />
-          <span 
-            className={`text-[9px] sm:text-[10px] uppercase tracking-tight text-center truncate w-full mt-1 leading-none transition-colors ${
-              activeTab === 'games' ? 'font-black text-white' : 'font-bold text-[#70798D] group-hover:text-[#AEB6C7]'
-            }`}
-          >
-            {labels?.games || 'GAMES'}
-          </span>
-        </button>
-
-        {/* 2. TOURNAMENT */}
-        <button
-          id="bottom-nav-tournament"
-          type="button"
-          onClick={() => onTabChange('tournament')}
-          className="flex flex-col items-center justify-center py-1.5 px-0.5 transition-all duration-150 cursor-pointer w-full group active:scale-95"
-        >
-          <TournamentCupIcon 
-            className={`w-5 h-5 sm:w-5.5 sm:h-5.5 shrink-0 transition-colors ${
-              activeTab === 'tournament' 
-                ? 'text-[#F5B942] stroke-[2.4] drop-shadow-[0_0_8px_rgba(245,185,66,0.4)]' 
-                : 'text-[#70798D] group-hover:text-[#AEB6C7] stroke-2'
-            }`} 
-          />
-          <span 
-            className={`text-[9px] sm:text-[10px] uppercase tracking-tight text-center truncate w-full mt-1 leading-none transition-colors ${
-              activeTab === 'tournament' ? 'font-black text-white' : 'font-bold text-[#70798D] group-hover:text-[#AEB6C7]'
-            }`}
-          >
-            {labels?.tournament || 'TOURNAMENT'}
-          </span>
-        </button>
-
-        {/* 3. HOME (CENTER ELEVATED CIRCULAR BUTTON) */}
-        <div className="flex flex-col items-center justify-center relative w-full h-full">
-          <button
-            id="bottom-nav-home"
-            type="button"
-            onClick={() => onTabChange('home')}
-            className={`-translate-y-4 sm:-translate-y-4.5 w-[58px] h-[58px] sm:w-[62px] sm:h-[62px] rounded-full flex flex-col items-center justify-center cursor-pointer transition-all duration-200 active:scale-95 p-0.5 ${
-              isHomeSelected
-                ? 'bg-gradient-to-tr from-[#7C3AED] via-[#6366F1] to-[#22D3EE] shadow-[0_4px_18px_rgba(124,58,237,0.55)] ring-2 ring-[#22D3EE]/40'
-                : 'bg-gradient-to-tr from-[#7C3AED]/80 via-[#6366F1]/70 to-[#22D3EE]/80 shadow-[0_4px_14px_rgba(124,58,237,0.35)] opacity-95 hover:opacity-100 hover:scale-102'
-            }`}
-            aria-label="Home"
-          >
-            <div className="w-full h-full rounded-full flex items-center justify-center bg-gradient-to-tr from-[#7C3AED] to-[#22D3EE]">
-              <Home className="w-6 h-6 sm:w-7 sm:h-7 text-white stroke-[2.3] drop-shadow-sm" />
-            </div>
-          </button>
           
-          <span 
-            className={`-translate-y-3 sm:-translate-y-3.5 text-[9px] sm:text-[10px] uppercase tracking-wider text-center font-black transition-colors leading-none ${
-              isHomeSelected ? 'text-white' : 'text-[#AEB6C7]'
-            }`}
-          >
-            {labels?.home || 'HOME'}
-          </span>
+          {/* Decorative Golden Wings flanking central Home medallion */}
+          <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 w-36 h-6 pointer-events-none flex items-center justify-center">
+            <svg className="w-full h-full" viewBox="0 0 144 24" fill="none">
+              <path
+                d="M4 22 C26 22 40 12 52 4 C58 0 86 0 92 4 C104 12 118 22 140 22"
+                stroke="url(#goldWingGrad)"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+              />
+              <path
+                d="M14 22 C32 22 44 14 54 7 C60 4 84 4 90 7 C100 14 112 22 130 22"
+                stroke="#FFAA24"
+                strokeWidth="1.2"
+                strokeOpacity="0.8"
+                strokeLinecap="round"
+              />
+              <defs>
+                <linearGradient id="goldWingGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                  <stop offset="0%" stopColor="#81502B" stopOpacity="0.1" />
+                  <stop offset="25%" stopColor="#C96A22" />
+                  <stop offset="50%" stopColor="#FFD35A" />
+                  <stop offset="75%" stopColor="#FFAA24" />
+                  <stop offset="100%" stopColor="#81502B" stopOpacity="0.1" />
+                </linearGradient>
+              </defs>
+            </svg>
+          </div>
+
+          {/* =========================================================================
+              1. TAB: GAME (Far Left)
+             ========================================================================= */}
+          <div className="flex items-center justify-center px-0.5">
+            <button
+              id="bottom-nav-games"
+              data-nav-tab="GAMES"
+              role="tab"
+              aria-selected={activeTab === 'games'}
+              aria-label={labels?.games || 'Game'}
+              type="button"
+              onClick={() => onTabChange('games')}
+              className={`w-full h-[52px] sm:h-[56px] rounded-2xl flex flex-col items-center justify-center py-1 transition-all duration-200 cursor-pointer group active:scale-95 ${
+                activeTab === 'games'
+                  ? 'bg-gradient-to-b from-[#FFAA24]/30 via-[#D97706]/40 to-[#9B4B12]/50 border border-[#FFAA24] shadow-[0_0_14px_rgba(255,170,36,0.45),inset_0_1px_1px_rgba(255,211,90,0.6)] -translate-y-0.5'
+                  : 'bg-[#24170F]/50 border border-[#81502B]/30 hover:border-[#FFAA24]/50 hover:bg-[#352316]/80'
+              }`}
+            >
+              <Gamepad2
+                className={`w-5 h-5 shrink-0 transition-all ${
+                  activeTab === 'games'
+                    ? 'text-[#FFD35A] stroke-[2.4] drop-shadow-[0_0_8px_rgba(255,211,90,0.8)]'
+                    : 'text-[#E6C8A4] group-hover:text-[#FFF0CF] stroke-[2]'
+                }`}
+              />
+              <span
+                className={`text-[10px] tracking-tight text-center mt-1 transition-colors leading-none ${
+                  activeTab === 'games'
+                    ? 'font-black text-[#FFF0CF] drop-shadow-sm'
+                    : 'font-bold text-[#E6C8A4] group-hover:text-[#FFF0CF]'
+                }`}
+              >
+                {labels?.games || 'Game'}
+              </span>
+              {activeTab === 'games' && (
+                <span className="w-3.5 h-0.5 rounded-full bg-[#FFD35A] mt-1 shadow-[0_0_6px_#FFAA24]" />
+              )}
+            </button>
+          </div>
+
+          {/* =========================================================================
+              2. TAB: TOURNAMENT (Second from Left)
+             ========================================================================= */}
+          <div className="flex items-center justify-center px-0.5">
+            <button
+              id="bottom-nav-tournament"
+              data-nav-tab="TOURNAMENT"
+              role="tab"
+              aria-selected={activeTab === 'tournament'}
+              aria-label={labels?.tournament || 'Tournament'}
+              type="button"
+              onClick={() => onTabChange('tournament')}
+              className={`w-full h-[52px] sm:h-[56px] rounded-2xl flex flex-col items-center justify-center py-1 transition-all duration-200 cursor-pointer group active:scale-95 ${
+                activeTab === 'tournament'
+                  ? 'bg-gradient-to-b from-[#FFAA24]/30 via-[#D97706]/40 to-[#9B4B12]/50 border border-[#FFAA24] shadow-[0_0_14px_rgba(255,170,36,0.45),inset_0_1px_1px_rgba(255,211,90,0.6)] -translate-y-0.5'
+                  : 'bg-[#24170F]/50 border border-[#81502B]/30 hover:border-[#FFAA24]/50 hover:bg-[#352316]/80'
+              }`}
+            >
+              <Trophy
+                className={`w-5 h-5 shrink-0 transition-all ${
+                  activeTab === 'tournament'
+                    ? 'text-[#FFD35A] stroke-[2.4] drop-shadow-[0_0_8px_rgba(255,211,90,0.8)]'
+                    : 'text-[#E6C8A4] group-hover:text-[#FFF0CF] stroke-[2]'
+                }`}
+              />
+              <span
+                className={`text-[10px] tracking-tight text-center mt-1 transition-colors leading-none truncate max-w-full px-0.5 ${
+                  activeTab === 'tournament'
+                    ? 'font-black text-[#FFF0CF] drop-shadow-sm'
+                    : 'font-bold text-[#E6C8A4] group-hover:text-[#FFF0CF]'
+                }`}
+              >
+                {labels?.tournament || 'Tournament'}
+              </span>
+              {activeTab === 'tournament' && (
+                <span className="w-3.5 h-0.5 rounded-full bg-[#FFD35A] mt-1 shadow-[0_0_6px_#FFAA24]" />
+              )}
+            </button>
+          </div>
+
+          {/* =========================================================================
+              3. TAB: HOME (CENTER — RAISED VISUAL CENTERPIECE)
+             ========================================================================= */}
+          <div className="flex flex-col items-center justify-center relative w-full h-full z-10">
+            <button
+              id="bottom-nav-home"
+              data-nav-tab="HOME"
+              role="tab"
+              aria-selected={isHomeSelected}
+              aria-label={labels?.home || 'Home'}
+              type="button"
+              onClick={() => onTabChange('home')}
+              className={`-translate-y-5 sm:-translate-y-6 w-15 h-15 sm:w-16 sm:h-16 rounded-full flex flex-col items-center justify-center cursor-pointer transition-all duration-200 active:scale-95 group relative ${
+                isHomeSelected
+                  ? 'border-[3px] border-[#FFD35A] bg-gradient-to-b from-[#FFF0CF] via-[#FFD35A] to-[#FFAA24] shadow-[0_0_24px_rgba(255,170,36,0.85),0_8px_20px_rgba(24,15,10,0.95),inset_0_2px_3px_rgba(255,255,255,0.7)]'
+                  : 'border-[3px] border-[#FFAA24]/80 bg-gradient-to-b from-[#442C1B] via-[#352316] to-[#24170F] shadow-[0_6px_20px_rgba(24,15,10,0.85),inset_0_1px_2px_rgba(255,211,90,0.4)] hover:border-[#FFD35A]'
+              }`}
+            >
+              {/* Outer Golden Glow Aura */}
+              <div
+                className={`absolute inset-0 rounded-full transition-opacity duration-300 pointer-events-none ${
+                  isHomeSelected
+                    ? 'bg-gradient-to-tr from-[#FFAA24]/40 to-[#FFD35A]/50 blur-md opacity-100'
+                    : 'opacity-0'
+                }`}
+              />
+
+              <div className="relative flex flex-col items-center justify-center leading-none">
+                <Home
+                  className={`w-5.5 h-5.5 sm:w-6 sm:h-6 stroke-[2.4] transition-colors ${
+                    isHomeSelected ? 'text-[#24170F] drop-shadow-xs' : 'text-[#FFD35A] drop-shadow-sm'
+                  }`}
+                />
+                <span
+                  className={`text-[10px] sm:text-[10.5px] font-black tracking-wider uppercase mt-0.5 leading-none ${
+                    isHomeSelected ? 'text-[#24170F]' : 'text-[#FFF0CF]'
+                  }`}
+                >
+                  {labels?.home || 'Home'}
+                </span>
+              </div>
+            </button>
+
+            {/* Subtle Amber Glow Accent Bar below Home */}
+            <div
+              className={`-translate-y-4 h-1 rounded-full transition-all duration-300 ${
+                isHomeSelected
+                  ? 'w-7 bg-[#FFD35A] shadow-[0_0_10px_rgba(255,211,90,0.9)] opacity-100'
+                  : 'w-2 bg-[#81502B]/60 opacity-40'
+              }`}
+            />
+          </div>
+
+          {/* =========================================================================
+              4. TAB: LEADERBOARD (Fourth)
+             ========================================================================= */}
+          <div className="flex items-center justify-center px-0.5">
+            <button
+              id="bottom-nav-leaderboard"
+              data-nav-tab="LEADERBOARD"
+              role="tab"
+              aria-selected={activeTab === 'leaderboard'}
+              aria-label={labels?.leaderboard || 'Leaderboard'}
+              type="button"
+              onClick={() => onTabChange('leaderboard')}
+              className={`w-full h-[52px] sm:h-[56px] rounded-2xl flex flex-col items-center justify-center py-1 transition-all duration-200 cursor-pointer group active:scale-95 ${
+                activeTab === 'leaderboard'
+                  ? 'bg-gradient-to-b from-[#FFAA24]/30 via-[#D97706]/40 to-[#9B4B12]/50 border border-[#FFAA24] shadow-[0_0_14px_rgba(255,170,36,0.45),inset_0_1px_1px_rgba(255,211,90,0.6)] -translate-y-0.5'
+                  : 'bg-[#24170F]/50 border border-[#81502B]/30 hover:border-[#FFAA24]/50 hover:bg-[#352316]/80'
+              }`}
+            >
+              <Crown
+                className={`w-5 h-5 shrink-0 transition-all ${
+                  activeTab === 'leaderboard'
+                    ? 'text-[#FFD35A] stroke-[2.4] drop-shadow-[0_0_8px_rgba(255,211,90,0.8)]'
+                    : 'text-[#E6C8A4] group-hover:text-[#FFF0CF] stroke-[2]'
+                }`}
+              />
+              <span
+                className={`text-[10px] tracking-tight text-center mt-1 transition-colors leading-none truncate max-w-full px-0.5 ${
+                  activeTab === 'leaderboard'
+                    ? 'font-black text-[#FFF0CF] drop-shadow-sm'
+                    : 'font-bold text-[#E6C8A4] group-hover:text-[#FFF0CF]'
+                }`}
+              >
+                {labels?.leaderboard || 'Leaderboard'}
+              </span>
+              {activeTab === 'leaderboard' && (
+                <span className="w-3.5 h-0.5 rounded-full bg-[#FFD35A] mt-1 shadow-[0_0_6px_#FFAA24]" />
+              )}
+            </button>
+          </div>
+
+          {/* =========================================================================
+              5. TAB: PROFILE (Far Right)
+             ========================================================================= */}
+          <div className="flex items-center justify-center px-0.5">
+            <button
+              id="bottom-nav-profile"
+              data-nav-tab="PROFILE"
+              role="tab"
+              aria-selected={activeTab === 'profile'}
+              aria-label={labels?.profile || 'Profile'}
+              type="button"
+              onClick={() => onTabChange('profile')}
+              className={`w-full h-[52px] sm:h-[56px] rounded-2xl flex flex-col items-center justify-center py-1 transition-all duration-200 cursor-pointer group active:scale-95 ${
+                activeTab === 'profile'
+                  ? 'bg-gradient-to-b from-[#FFAA24]/30 via-[#D97706]/40 to-[#9B4B12]/50 border border-[#FFAA24] shadow-[0_0_14px_rgba(255,170,36,0.45),inset_0_1px_1px_rgba(255,211,90,0.6)] -translate-y-0.5'
+                  : 'bg-[#24170F]/50 border border-[#81502B]/30 hover:border-[#FFAA24]/50 hover:bg-[#352316]/80'
+              }`}
+            >
+              <User
+                className={`w-5 h-5 shrink-0 transition-all ${
+                  activeTab === 'profile'
+                    ? 'text-[#FFD35A] stroke-[2.4] drop-shadow-[0_0_8px_rgba(255,211,90,0.8)]'
+                    : 'text-[#E6C8A4] group-hover:text-[#FFF0CF] stroke-[2]'
+                }`}
+              />
+              <span
+                className={`text-[10px] tracking-tight text-center mt-1 transition-colors leading-none ${
+                  activeTab === 'profile'
+                    ? 'font-black text-[#FFF0CF] drop-shadow-sm'
+                    : 'font-bold text-[#E6C8A4] group-hover:text-[#FFF0CF]'
+                }`}
+              >
+                {labels?.profile || 'Profile'}
+              </span>
+              {activeTab === 'profile' && (
+                <span className="w-3.5 h-0.5 rounded-full bg-[#FFD35A] mt-1 shadow-[0_0_6px_#FFAA24]" />
+              )}
+            </button>
+          </div>
+
         </div>
-
-        {/* 4. LEADERBOARD */}
-        <button
-          id="bottom-nav-leaderboard"
-          type="button"
-          onClick={() => onTabChange('leaderboard')}
-          className="flex flex-col items-center justify-center py-1.5 px-0.5 transition-all duration-150 cursor-pointer w-full group active:scale-95"
-        >
-          <Trophy 
-            className={`w-5 h-5 sm:w-5.5 sm:h-5.5 shrink-0 transition-colors ${
-              activeTab === 'leaderboard' 
-                ? 'text-[#22D3EE] stroke-[2.4] drop-shadow-[0_0_8px_rgba(34,211,238,0.4)]' 
-                : 'text-[#70798D] group-hover:text-[#AEB6C7] stroke-2'
-            }`} 
-          />
-          <span 
-            className={`text-[9px] sm:text-[10px] uppercase tracking-tight text-center truncate w-full mt-1 leading-none transition-colors ${
-              activeTab === 'leaderboard' ? 'font-black text-white' : 'font-bold text-[#70798D] group-hover:text-[#AEB6C7]'
-            }`}
-          >
-            {labels?.leaderboard || 'LEADERBOARD'}
-          </span>
-        </button>
-
-        {/* 5. PROFILE */}
-        <button
-          id="bottom-nav-profile"
-          type="button"
-          onClick={() => onTabChange('profile')}
-          className="flex flex-col items-center justify-center py-1.5 px-0.5 transition-all duration-150 cursor-pointer w-full group active:scale-95"
-        >
-          <User 
-            className={`w-5 h-5 sm:w-5.5 sm:h-5.5 shrink-0 transition-colors ${
-              activeTab === 'profile' 
-                ? 'text-[#7C3AED] stroke-[2.4] drop-shadow-[0_0_8px_rgba(124,58,237,0.4)]' 
-                : 'text-[#70798D] group-hover:text-[#AEB6C7] stroke-2'
-            }`} 
-          />
-          <span 
-            className={`text-[9px] sm:text-[10px] uppercase tracking-tight text-center truncate w-full mt-1 leading-none transition-colors ${
-              activeTab === 'profile' ? 'font-black text-white' : 'font-bold text-[#70798D] group-hover:text-[#AEB6C7]'
-            }`}
-          >
-            {labels?.profile || 'PROFILE'}
-          </span>
-        </button>
-
       </div>
     </nav>
   );
 };
 
+export default BottomNav;

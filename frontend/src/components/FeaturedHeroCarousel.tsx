@@ -1,12 +1,15 @@
 /**
- * GameON Tele - Top Featured Hero Banner Carousel
- * Features large attractive banners, game titles, category tags, rating,
- * and high-contrast Play & Details action buttons.
+ * GoDigital - Featured Hero Banner Carousel
+ * Conforming to reference design:
+ * - High-impact cinematic banner with warm sunset overlays (#24170F)
+ * - Rich Gold / Amber action buttons and accent badges (#FFD35A / #FFAA24)
+ * - Embedded tournament rewards card (matching reference design layout)
+ * - Subtle bronze borders (#81502B) and warm cream typography (#FFF0CF)
  */
 
 import React, { useState, useEffect } from 'react';
 import { GameDefinition } from '../types';
-import { Play, Info, Star, ChevronLeft, ChevronRight, Sparkles } from 'lucide-react';
+import { Play, Info, Star, ChevronLeft, ChevronRight, Sparkles, Crown, Trophy, Medal } from 'lucide-react';
 
 interface FeaturedHeroCarouselProps {
   featuredGames: GameDefinition[];
@@ -51,54 +54,90 @@ export const FeaturedHeroCarousel: React.FC<FeaturedHeroCarouselProps> = ({
   return (
     <div 
       id="home-featured-hero"
-      className="relative w-full rounded-3xl overflow-hidden bg-[#181C29] text-white border border-[#282E3D] shadow-md select-none"
+      className="relative w-full rounded-[24px] sm:rounded-[28px] overflow-hidden bg-[#24170F] text-[#FFF0CF] border border-[#81502B] shadow-[0_8px_32px_rgba(36,23,15,0.8)] select-none"
     >
       {/* Background Artwork Banner */}
-      <div className="relative h-56 sm:h-64 md:h-72 w-full overflow-hidden">
+      <div className="relative h-60 sm:h-72 md:h-80 w-full overflow-hidden">
         <img
           src={currentGame.bannerUrl || currentGame.thumbnailUrl}
           alt={currentGame.title}
-          className="w-full h-full object-cover opacity-85 transition-all duration-700 ease-out"
+          className="w-full h-full object-cover opacity-90 transition-all duration-700 ease-out"
         />
 
-        {/* Ambient Multi-Stop Gradient Overlays */}
-        <div className="absolute inset-0 bg-gradient-to-t from-[#121622] via-[#121622]/50 to-transparent" />
-        <div className="absolute inset-0 bg-gradient-to-r from-[#121622]/80 via-transparent to-transparent" />
+        {/* Ambient Multi-Stop Gradient Overlays (Warm sunset palette) */}
+        <div className="absolute inset-0 bg-gradient-to-t from-[#24170F] via-[#24170F]/55 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-r from-[#24170F]/90 via-[#24170F]/40 to-transparent" />
 
         {/* Top Badges */}
         <div className="absolute top-3.5 left-4 right-4 flex items-center justify-between z-10">
           <div className="flex items-center gap-2">
-            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#7C3AED] text-white text-[10px] font-black uppercase tracking-wider shadow-sm">
-              <Sparkles className="w-3 h-3" />
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-gradient-to-r from-[#FFD35A] to-[#FFAA24] text-[#24170F] text-[10px] font-black uppercase tracking-wider shadow-sm">
+              <Sparkles className="w-3 h-3 fill-current" />
               <span>FEATURED</span>
             </span>
-            <span className="px-2.5 py-1 rounded-full bg-[#202536]/80 backdrop-blur-xs text-[#AEB6C7] border border-[#282E3D] text-[10px] font-bold uppercase tracking-wider">
+            <span className="px-2.5 py-1 rounded-full bg-[#352316]/90 backdrop-blur-xs text-[#E6C8A4] border border-[#81502B] text-[10px] font-bold uppercase tracking-wider">
               {currentGame.category}
             </span>
           </div>
 
-          <div className="flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#202536]/80 backdrop-blur-xs text-[#F5B942] border border-[#282E3D] text-xs font-bold">
+          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#352316]/90 backdrop-blur-xs text-[#FFD35A] border border-[#81502B] text-xs font-black shadow-xs">
             <Star className="w-3.5 h-3.5 fill-current" />
             <span>{currentGame.rating}</span>
           </div>
         </div>
 
+        {/* Right Embedded Tournament Prize Card */}
+        <div className="hidden md:flex absolute top-3.5 right-4 z-10 w-56 rounded-2xl bg-[#352316]/90 backdrop-blur-md border border-[#81502B] p-2.5 flex-col gap-1.5 shadow-lg">
+          <div className="flex items-center justify-between px-1">
+            <span className="text-[10px] font-black uppercase tracking-wider text-[#FFD35A] flex items-center gap-1">
+              <Crown className="w-3 h-3 text-[#FFD35A] fill-[#FFD35A]" />
+              Tournament Rewards
+            </span>
+            <span className="text-[9px] font-black px-1.5 py-0.5 rounded-full bg-[#FFAA24]/15 text-[#FFD35A] border border-[#FFAA24]/30">
+              Live
+            </span>
+          </div>
+
+          <div className="space-y-1 text-[11px]">
+            <div className="flex items-center justify-between px-2 py-1 rounded-lg bg-[#442C1B]/80 border border-[#FFAA24]/40">
+              <span className="font-extrabold text-[#FFD35A] flex items-center gap-1">
+                <Crown className="w-3 h-3 fill-[#FFD35A]" /> 1st
+              </span>
+              <span className="font-black text-[#FFF0CF]">Up to 50,000 ETB</span>
+            </div>
+            <div className="flex items-center justify-between px-2 py-0.5 rounded-md bg-[#24170F]/60 text-[#E6C8A4]">
+              <span className="font-bold flex items-center gap-1"><Trophy className="w-2.5 h-2.5 text-[#E6C8A4]" /> 2nd</span>
+              <span className="font-medium text-[10px]">Great Prizes</span>
+            </div>
+            <div className="flex items-center justify-between px-2 py-0.5 rounded-md bg-[#24170F]/60 text-[#E6C8A4]">
+              <span className="font-bold flex items-center gap-1"><Medal className="w-2.5 h-2.5 text-[#C96A22]" /> 3rd</span>
+              <span className="font-medium text-[10px]">Great Prizes</span>
+            </div>
+          </div>
+
+          <div className="text-center pt-0.5">
+            <span className="text-[9px] font-extrabold text-[#FFD35A] tracking-wider uppercase">
+              ★ Instant telebirr Payouts ★
+            </span>
+          </div>
+        </div>
+
         {/* Bottom Game Details & Action CTAs */}
         <div className="absolute bottom-4 left-4 right-4 z-10 space-y-2">
-          <div>
-            <h1 className="text-xl sm:text-2xl md:text-3xl font-black text-white leading-tight drop-shadow-sm">
+          <div className="max-w-md">
+            <h1 className="text-xl sm:text-2xl md:text-3xl font-black text-[#FFF0CF] leading-tight drop-shadow-sm">
               {currentGame.title}
             </h1>
-            <p className="text-xs sm:text-sm text-[#AEB6C7] line-clamp-1 max-w-md mt-0.5">
+            <p className="text-xs sm:text-sm text-[#E6C8A4] line-clamp-1 mt-0.5">
               {currentGame.tagline || currentGame.description}
             </p>
           </div>
 
           <div className="flex items-center gap-2.5 pt-1">
-            {/* Play Button */}
+            {/* Play Button in Rich Gold / Amber */}
             <button
               onClick={() => onPlayGame(currentGame)}
-              className="py-2.5 px-5 rounded-[13px] font-black text-xs sm:text-sm transition-all shadow-sm shadow-[#7C3AED]/30 flex items-center gap-2 cursor-pointer active:scale-95 bg-[#7C3AED] hover:bg-[#6D28D9] active:bg-[#5B21B6] text-white border-none"
+              className="py-2.5 px-5 rounded-[14px] font-black text-xs sm:text-sm transition-all shadow-md shadow-[#FFAA24]/20 flex items-center gap-2 cursor-pointer active:scale-95 bg-gradient-to-r from-[#FFD35A] to-[#FFAA24] text-[#24170F] hover:brightness-110 border-none"
             >
               <Play className="w-4 h-4 fill-current" />
               <span>
@@ -110,9 +149,9 @@ export const FeaturedHeroCarousel: React.FC<FeaturedHeroCarouselProps> = ({
             {onClickDetails && (
               <button
                 onClick={() => onClickDetails(currentGame)}
-                className="py-2.5 px-4 rounded-[13px] bg-[#202536] hover:bg-[#282E3D] border border-[#282E3D] text-white font-bold text-xs sm:text-sm backdrop-blur-xs transition-colors flex items-center gap-1.5 cursor-pointer active:scale-95"
+                className="py-2.5 px-4 rounded-[14px] bg-[#352316]/90 hover:bg-[#442C1B] border border-[#81502B] hover:border-[#FFAA24]/50 text-[#FFF0CF] font-bold text-xs sm:text-sm backdrop-blur-xs transition-colors flex items-center gap-1.5 cursor-pointer active:scale-95"
               >
-                <Info className="w-4 h-4 text-[#22D3EE]" />
+                <Info className="w-4 h-4 text-[#FFD35A]" />
                 <span>Details</span>
               </button>
             )}
@@ -124,14 +163,14 @@ export const FeaturedHeroCarousel: React.FC<FeaturedHeroCarouselProps> = ({
           <div className="absolute inset-y-0 left-2 right-2 flex items-center justify-between pointer-events-none z-20">
             <button
               onClick={prevSlide}
-              className="w-8 h-8 rounded-full bg-[#121622]/80 hover:bg-[#202536] border border-[#282E3D] text-white flex items-center justify-center transition-colors pointer-events-auto cursor-pointer"
+              className="w-8 h-8 rounded-full bg-[#24170F]/80 hover:bg-[#352316] border border-[#81502B] text-[#FFF0CF] flex items-center justify-center transition-colors pointer-events-auto cursor-pointer shadow-md"
               aria-label="Previous featured game"
             >
               <ChevronLeft className="w-4 h-4" />
             </button>
             <button
               onClick={nextSlide}
-              className="w-8 h-8 rounded-full bg-[#121622]/80 hover:bg-[#202536] border border-[#282E3D] text-white flex items-center justify-center transition-colors pointer-events-auto cursor-pointer"
+              className="w-8 h-8 rounded-full bg-[#24170F]/80 hover:bg-[#352316] border border-[#81502B] text-[#FFF0CF] flex items-center justify-center transition-colors pointer-events-auto cursor-pointer shadow-md"
               aria-label="Next featured game"
             >
               <ChevronRight className="w-4 h-4" />
@@ -142,13 +181,15 @@ export const FeaturedHeroCarousel: React.FC<FeaturedHeroCarouselProps> = ({
 
       {/* Pagination Dots */}
       {featuredGames.length > 1 && (
-        <div className="py-2 bg-[#121622] border-t border-[#282E3D] flex items-center justify-center gap-1.5">
+        <div className="py-2 bg-[#24170F] border-t border-[#81502B] flex items-center justify-center gap-1.5">
           {featuredGames.map((_, idx) => (
             <button
               key={idx}
               onClick={() => setCurrentIndex(idx)}
               className={`h-1.5 rounded-full transition-all cursor-pointer ${
-                currentIndex === idx ? 'w-5 bg-[#7C3AED]' : 'w-1.5 bg-[#282E3D]'
+                currentIndex === idx 
+                  ? 'w-6 bg-[#FFD35A] shadow-[0_0_6px_rgba(255,211,90,0.6)]' 
+                  : 'w-1.5 bg-[#81502B] hover:bg-[#E6C8A4]'
               }`}
               aria-label={`Go to slide ${idx + 1}`}
             />

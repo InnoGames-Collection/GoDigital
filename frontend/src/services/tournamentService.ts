@@ -71,8 +71,8 @@ export interface TournamentSummaryData {
 // Default Weekly Tournament Configuration (Admin-configurable)
 export const DEFAULT_WEEKLY_TOURNAMENT: WeeklyTournamentConfig = {
   id: 'weekly_championship_cup',
-  title: 'Helix Tower Grand Prix',
-  subtitle: '3D Cylinder Tower Tournament • 2 Coins Entry',
+  title: 'Helix Jump Grand Prix',
+  subtitle: 'Official Weekly Tournament • Helix Jump',
   frequency: 'weekly',
   sponsor: 'telebirr & EthioTelecom',
   selectedGameIds: ['helix-jump'],
@@ -86,102 +86,29 @@ export const DEFAULT_WEEKLY_TOURNAMENT: WeeklyTournamentConfig = {
   ],
 };
 
-// Realistic Seed Competitors with authentic Ethiopian profiles & multi-game performance
-interface SeedCompetitor {
+import { apiService } from './apiService';
+
+// Canonical Baseline Seed Contenders matching PostgreSQL db/seeds/001_initial_seeds.sql
+interface CanonicalDbEntry {
   id: string;
   name: string;
   phone: string;
-  // Deterministic scores for each game
-  scores: Record<string, number>;
-  timestampOffsetHours: number; // For tie breaking
+  masked: string;
+  score: number;
+  timestampOffsetHours: number;
 }
 
-const SEED_COMPETITORS: SeedCompetitor[] = [
-  {
-    id: 'seed_1',
-    name: 'Solomon T.',
-    phone: '0911234567',
-    scores: { 'helix-jump': 4280 },
-    timestampOffsetHours: 42,
-  },
-  {
-    id: 'seed_2',
-    name: 'Selamawit G.',
-    phone: '0922889900',
-    scores: { 'helix-jump': 4280 },
-    timestampOffsetHours: 36,
-  },
-  {
-    id: 'seed_3',
-    name: 'Dawit M.',
-    phone: '0915667788',
-    scores: { 'helix-jump': 4280 },
-    timestampOffsetHours: 28,
-  },
-  {
-    id: 'seed_4',
-    name: 'Bethlehem K.',
-    phone: '0933112233',
-    scores: { 'helix-jump': 4280 },
-    timestampOffsetHours: 24,
-  },
-  {
-    id: 'seed_5',
-    name: 'Yared A.',
-    phone: '0918990011',
-    scores: { 'helix-jump': 4280 },
-    timestampOffsetHours: 20,
-  },
-  {
-    id: 'seed_6',
-    name: 'Hiwot T.',
-    phone: '0920445566',
-    scores: { 'helix-jump': 4280 },
-    timestampOffsetHours: 18,
-  },
-  {
-    id: 'seed_7',
-    name: 'Kibrom Z.',
-    phone: '0912778899',
-    scores: { 'helix-jump': 4280 },
-    timestampOffsetHours: 15,
-  },
-  {
-    id: 'seed_8',
-    name: 'Tsion W.',
-    phone: '0944332211',
-    scores: { 'helix-jump': 4280 },
-    timestampOffsetHours: 12,
-  },
-  {
-    id: 'seed_9',
-    name: 'Ephrem B.',
-    phone: '0910556677',
-    scores: { 'helix-jump': 4280 },
-    timestampOffsetHours: 9,
-  },
-  {
-    id: 'seed_10',
-    name: 'Rahel D.',
-    phone: '0927889922',
-    scores: { 'helix-jump': 4280 },
-    timestampOffsetHours: 6,
-  },
-  {
-    id: 'seed_11',
-    name: 'Abel M.',
-    phone: '0931445566',
-    scores: { 'helix-jump': 4280 },
-    timestampOffsetHours: 4,
-  },
-  {
-    id: 'seed_12',
-    name: 'Marta T.',
-    phone: '0919223344',
-    scores: { 'helix-jump': 4280 },
-    timestampOffsetHours: 2,
-  },
+const CANONICAL_DB_ENTRIES: CanonicalDbEntry[] = [
+  { id: 'db_seed_1', name: 'Player 091*****890', phone: '0911998890', masked: '091*****890', score: 4850, timestampOffsetHours: 42 },
+  { id: 'db_seed_2', name: 'Player 092*****412', phone: '0922334412', masked: '092*****412', score: 4320, timestampOffsetHours: 36 },
+  { id: 'db_seed_3', name: 'Player 093*****589', phone: '0933445589', masked: '093*****589', score: 3950, timestampOffsetHours: 28 },
+  { id: 'db_seed_4', name: 'Player 094*****633', phone: '0944556633', masked: '094*****633', score: 3420, timestampOffsetHours: 24 },
+  { id: 'db_seed_5', name: 'Player 095*****744', phone: '0955667744', masked: '095*****744', score: 3180, timestampOffsetHours: 20 },
 ];
+
+let cachedServerEntries: OverallTournamentEntry[] | null = null;
+let cachedTotalParticipants = 5;
+let isSyncingTournaments = false;
 
 const maskPhoneNumber = (phone?: string): string => {
   const digits = (phone || '0911428890').replace(/\D/g, '');
@@ -195,21 +122,46 @@ const maskPhoneNumber = (phone?: string): string => {
 
 export const TournamentService = {
   /**
+   * Asynchronously synchronize active tournament and live leaderboard from PostgreSQL
+   */
+  async syncWithBackend(): Promise<void> {
+    if (isSyncingTournaments) return;
+    isSyncingTournaments = true;
+    try {
+      const tourns: any = await apiService.getTournaments();
+      if (Array.isArray(tourns) && tourns.length > 0) {
+        const activeTourn = tourns.find((t: any) => t.status === 'ACTIVE') || tourns[0];
+        if (activeTourn?.leaderboard && Array.isArray(activeTourn.leaderboard)) {
+          const baseTimestamp = Date.now();
+          cachedServerEntries = activeTourn.leaderboard.map((lb: any, idx: number) => ({
+            rank: lb.rank || idx + 1,
+            playerId: lb.player_msisdn || `player_${idx + 1}`,
+            playerName: `Player ${lb.masked_msisdn || maskPhoneNumber(lb.player_msisdn)}`,
+            playerMasked: lb.masked_msisdn || maskPhoneNumber(lb.player_msisdn),
+            bestScore: Number(lb.score) || 0,
+            bestGameId: activeTourn.game_id || 'helix-jump',
+            bestGameTitle: activeTourn.title || 'Helix Jump',
+            achievementTimestamp: lb.submitted_at ? new Date(lb.submitted_at).getTime() : baseTimestamp - (idx * 3600000),
+            rewardText: lb.prize_etb ? `${lb.prize_etb.toLocaleString()} ETB Prize` : undefined,
+            isCurrentUser: false,
+            gameScores: { [activeTourn.game_id || 'helix-jump']: Number(lb.score) || 0 },
+          }));
+        }
+        if (typeof activeTourn.total_participants === 'number') {
+          cachedTotalParticipants = activeTourn.total_participants;
+        }
+      }
+    } catch (e) {
+      console.warn('[TournamentService] Failed to sync tournaments with backend:', e);
+    } finally {
+      isSyncingTournaments = false;
+    }
+  },
+
+  /**
    * Retrieves active tournament configuration.
-   * Allows admin customization via localStorage override if set.
    */
   getActiveConfig(): WeeklyTournamentConfig {
-    if (typeof window !== 'undefined') {
-      try {
-        const stored = localStorage.getItem('gameon_tournament_config');
-        if (stored) {
-          const parsed = JSON.parse(stored);
-          if (Array.isArray(parsed.selectedGameIds) && parsed.selectedGameIds.length > 0) {
-            return { ...DEFAULT_WEEKLY_TOURNAMENT, ...parsed };
-          }
-        }
-      } catch {}
-    }
     return DEFAULT_WEEKLY_TOURNAMENT;
   },
 
@@ -271,9 +223,38 @@ export const TournamentService = {
   },
 
   /**
+   * Authoritative Helix Jump tournament best score used across GoDigital (Home, Profile, Tournament, and Leaderboard).
+   * Consolidates profile highScores, leaderboard stats, tournament engine, and local storage save data.
+   */
+  getHelixTournamentBestScore(profile?: UserProfile): number {
+    const stats = GameLeaderboardService.getUserStats('helix-jump', profile);
+    const profileScore = profile?.highScores?.['helix-jump'] || 0;
+    let score = Math.max(stats.bestScore, profileScore);
+
+    if (typeof window !== 'undefined') {
+      try {
+        const stored = localStorage.getItem('teleplay_helix_jump_savedata_v1');
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (typeof parsed?.bestScore === 'number') {
+            score = Math.max(score, parsed.bestScore);
+          }
+        }
+      } catch {
+        // storage fallback
+      }
+    }
+
+    return score;
+  },
+
+  /**
    * Extracts user's score in a specific tournament game.
    */
   getUserScoreForGame(gameId: string, profile?: UserProfile): number {
+    if (gameId === 'helix-jump') {
+      return this.getHelixTournamentBestScore(profile);
+    }
     const stats = GameLeaderboardService.getUserStats(gameId, profile);
     const profileScore = profile?.highScores?.[gameId] || 0;
     return Math.max(stats.bestScore, profileScore);
@@ -301,53 +282,54 @@ export const TournamentService = {
       }
     });
 
+    // Authoritative fallback: if helix-jump is active, ensure currentUserBestScore matches getHelixTournamentBestScore
+    const helixBest = this.getHelixTournamentBestScore(profile);
+    if (helixBest > currentUserBestScore) {
+      currentUserBestScore = helixBest;
+      currentUserScores['helix-jump'] = helixBest;
+      currentUserBestGameId = 'helix-jump';
+    }
+
     const currentUserBestGame: CatalogGame | null = currentUserBestGameId
       ? gameMap.get(currentUserBestGameId) || null
-      : null;
+      : participatingGames[0] || null;
 
-    // 2. Build entries for seed competitors
+    // 2. Build baseline entries from backend server cache or canonical DB seed
+    if (!cachedServerEntries && !isSyncingTournaments) {
+      TournamentService.syncWithBackend();
+    }
+
     const baseTimestamp = Date.now();
-    const entries: OverallTournamentEntry[] = SEED_COMPETITORS.map((seed) => {
-      // Find seed's best score across active tournament games
-      let bestScore = 0;
-      let bestGameId = participatingGames[0]?.gameId || '';
-
-      participatingGames.forEach((g) => {
-        const score = seed.scores[g.gameId] || 0;
-        if (score > bestScore) {
-          bestScore = score;
-          bestGameId = g.gameId;
-        }
-      });
-
-      const bestGame = gameMap.get(bestGameId);
-      const achievementTimestamp = baseTimestamp - (seed.timestampOffsetHours * 3600 * 1000);
-
-      return {
-        rank: 0,
-        playerId: seed.id,
-        playerName: seed.name,
-        playerMasked: maskPhoneNumber(seed.phone),
-        bestScore,
-        bestGameId,
-        bestGameTitle: bestGame?.gameName || 'Game',
-        achievementTimestamp,
-        isCurrentUser: false,
-        gameScores: { ...seed.scores },
-      };
-    });
+    const entries: OverallTournamentEntry[] = cachedServerEntries && cachedServerEntries.length > 0
+      ? cachedServerEntries.map((e) => ({ ...e }))
+      : CANONICAL_DB_ENTRIES.map((seed, idx) => {
+          const achievementTimestamp = baseTimestamp - (seed.timestampOffsetHours * 3600 * 1000);
+          return {
+            rank: idx + 1,
+            playerId: seed.id,
+            playerName: seed.name,
+            playerMasked: seed.masked,
+            bestScore: seed.score,
+            bestGameId: 'helix-jump',
+            bestGameTitle: 'Helix Jump',
+            achievementTimestamp,
+            rewardText: idx === 0 ? '10,000 ETB Prize' : idx === 1 ? '6,000 ETB Prize' : idx === 2 ? '3,000 ETB Prize' : '1,000 ETB Prize',
+            isCurrentUser: false,
+            gameScores: { 'helix-jump': seed.score },
+          };
+        });
 
     // 3. User's entry if they have played any tournament game
-    let currentUserRank = 84;
+    let currentUserRank = 0; // 0 indicates unranked
     const userEntry: OverallTournamentEntry | null = currentUserBestScore > 0 ? {
       rank: 0,
       playerId: profile?.id || 'current_user',
       playerName: profile?.displayName || 'You',
       playerMasked: maskPhoneNumber(profile?.phoneNumber),
       bestScore: currentUserBestScore,
-      bestGameId: currentUserBestGameId,
-      bestGameTitle: currentUserBestGame?.gameName || 'Featured Game',
-      achievementTimestamp: Date.now() - 180000, // Recent
+      bestGameId: currentUserBestGameId || 'helix-jump',
+      bestGameTitle: currentUserBestGame?.gameName || 'Helix Jump',
+      achievementTimestamp: Date.now() - 60000, // Recent
       isCurrentUser: true,
       gameScores: { ...currentUserScores },
     } : null;
@@ -374,10 +356,10 @@ export const TournamentService = {
       }
 
       // Assign prize label according to rank
-      if (item.rank === 1) item.rewardText = '5,000 ETB + 2,000 Coins';
-      else if (item.rank === 2) item.rewardText = '3,000 ETB + 1,000 Coins';
-      else if (item.rank === 3) item.rewardText = '1,500 ETB + 500 Coins';
-      else if (item.rank <= 10) item.rewardText = '300 ETB + 250 Coins';
+      if (item.rank === 1) item.rewardText = '10,000 ETB + 2,000 Coins';
+      else if (item.rank === 2) item.rewardText = '6,000 ETB + 1,000 Coins';
+      else if (item.rank === 3) item.rewardText = '3,000 ETB + 500 Coins';
+      else if (item.rank <= 10) item.rewardText = '1,000 ETB + 250 Coins';
     });
 
     const topEntries = allCandidates.slice(0, 10);
@@ -388,9 +370,9 @@ export const TournamentService = {
       topEntries,
       currentUserBestScore,
       currentUserBestGame,
-      currentUserRank: currentUserBestScore > 0 ? currentUserRank : 84,
+      currentUserRank: currentUserBestScore > 0 ? currentUserRank : 0,
       currentUserScores,
-      totalParticipants: 3420 + (participatingGames.length * 280),
+      totalParticipants: cachedTotalParticipants || Math.max(allCandidates.length, 5),
       timeRemaining: this.getTimeRemaining(),
     };
   },

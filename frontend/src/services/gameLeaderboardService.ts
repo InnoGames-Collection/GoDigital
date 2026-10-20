@@ -23,19 +23,10 @@ export interface GameLeaderboardResult {
   totalParticipants: number;
 }
 
-// Seed mock players for deterministic realism per game
-const SEED_PLAYERS = [
-  { phone: '0911234567', name: 'Solomon T.' },
-  { phone: '0922889900', name: 'Selamawit G.' },
-  { phone: '0915667788', name: 'Dawit M.' },
-  { phone: '0933112233', name: 'Bethlehem K.' },
-  { phone: '0918990011', name: 'Yared A.' },
-  { phone: '0920445566', name: 'Hiwot T.' },
-  { phone: '0912778899', name: 'Kibrom Z.' },
-  { phone: '0944332211', name: 'Tsion W.' },
-  { phone: '0910556677', name: 'Ephrem B.' },
-  { phone: '0927889922', name: 'Rahel D.' },
-];
+import { apiService } from './apiService';
+
+const serverLeaderboardCache: Record<string, { timestamp: number; entries: GameLeaderboardEntry[] }> = {};
+let isFetchingLeaderboard: Record<string, boolean> = {};
 
 export const maskPhone = (phone?: string): string => {
   const digits = (phone || '0911428890').replace(/\D/g, '');
@@ -107,66 +98,80 @@ export const GameLeaderboardService = {
     }
   },
 
+  /**
+   * Asynchronously fetch game high scores leaderboard from PostgreSQL
+   */
+  async fetchGameLeaderboard(gameId: string): Promise<GameLeaderboardEntry[]> {
+    if (isFetchingLeaderboard[gameId]) {
+      return serverLeaderboardCache[gameId]?.entries || [];
+    }
+    isFetchingLeaderboard[gameId] = true;
+    try {
+      const res = await apiService.getGameLeaderboard(gameId);
+      if (Array.isArray(res)) {
+        const mapped: GameLeaderboardEntry[] = res.map((item: any, idx: number) => ({
+          rank: item.rank || idx + 1,
+          playerMasked: item.playerMasked || (item.phone ? maskPhone(item.phone) : '091*****890'),
+          playerName: item.playerName || `Player ${item.playerMasked || ''}`,
+          score: Number(item.score) || 0,
+          rewardText: item.rewardText || (idx === 0 ? '500 Coins' : idx === 1 ? '300 Coins' : idx === 2 ? '200 Coins' : idx < 5 ? '100 Coins' : undefined),
+          isCurrentUser: false,
+        }));
+        serverLeaderboardCache[gameId] = { timestamp: Date.now(), entries: mapped };
+        return mapped;
+      }
+    } catch (e) {
+      console.warn(`[GameLeaderboardService] Failed to load leaderboard for ${gameId}:`, e);
+    } finally {
+      isFetchingLeaderboard[gameId] = false;
+    }
+    return serverLeaderboardCache[gameId]?.entries || [];
+  },
+
   getLeaderboardForGame(gameId: string, profile?: UserProfile): GameLeaderboardResult | null {
     const game = GameCatalog.getById(gameId);
     if (!game || !game.leaderboardEnabled) {
       return null;
     }
 
+    // Trigger backend fetch if not cached or expired (15 seconds)
+    const cached = serverLeaderboardCache[gameId];
+    if (!cached || Date.now() - cached.timestamp > 15000) {
+      this.fetchGameLeaderboard(gameId);
+    }
+
     const stats = this.getUserStats(gameId, profile);
     const userScore = stats.bestScore;
 
-    // Generate base high score range based on game characteristics
-    let topBaseScore = 400;
-    if (gameId === 'helix-jump') topBaseScore = 480;
-    else if (gameId === 'candy-blast') topBaseScore = 420;
-    else if (gameId === 'world-legends') topBaseScore = 390;
-    else if (gameId === 'moto-race') topBaseScore = 450;
-    else if (gameId === 'fruit-slice') topBaseScore = 440;
-    else if (gameId === 'puzzle-block') topBaseScore = 2450;
-    else if (gameId === 'solitaire') topBaseScore = 780;
-    else if (gameId === 'hill-rider') topBaseScore = 860;
+    // Use cached server entries if available
+    const entries: GameLeaderboardEntry[] = cached?.entries ? cached.entries.map((e) => ({ ...e })) : [];
 
-    const entries: GameLeaderboardEntry[] = SEED_PLAYERS.map((player, idx) => {
-      // Descending realistic scores
-      const score = Math.max(150, topBaseScore - idx * 25 - (idx % 3) * 7);
-      let rewardText: string | undefined;
-      if (idx === 0) rewardText = '500 Coins';
-      else if (idx === 1) rewardText = '300 Coins';
-      else if (idx === 2) rewardText = '200 Coins';
-      else if (idx < 5) rewardText = '100 Coins';
-
-      return {
-        rank: idx + 1,
-        playerMasked: maskPhone(player.phone),
-        playerName: player.name,
-        score,
-        rewardText,
-        isCurrentUser: false,
-      };
-    });
-
-    // Check where current user ranks
-    let userRank = 14;
-    for (let i = 0; i < entries.length; i++) {
-      if (userScore >= entries[i].score) {
-        userRank = i + 1;
-        break;
+    // Find rank for current user
+    let userRank = 0;
+    if (userScore > 0) {
+      userRank = 1;
+      for (const entry of entries) {
+        if (userScore < entry.score) {
+          userRank++;
+        }
       }
-    }
 
-    // If user is in top 10, splice into list
-    if (userRank <= 10 && userScore > 0) {
-      entries.splice(userRank - 1, 0, {
-        rank: userRank,
-        playerMasked: maskPhone(profile?.phoneNumber),
-        playerName: profile?.displayName || 'You',
-        score: userScore,
-        rewardText: userRank <= 3 ? `${500 - (userRank - 1) * 150} Coins` : '100 Coins',
-        isCurrentUser: true,
-      });
-      // Re-rank
-      entries.pop(); // keep top 10
+      const existingIndex = entries.findIndex((e) => e.isCurrentUser);
+      if (existingIndex >= 0) {
+        entries[existingIndex].score = Math.max(entries[existingIndex].score, userScore);
+      } else if (userRank <= 10) {
+        entries.splice(userRank - 1, 0, {
+          rank: userRank,
+          playerMasked: maskPhone(profile?.phoneNumber),
+          playerName: profile?.displayName || 'You',
+          score: userScore,
+          rewardText: userRank <= 3 ? `${500 - (userRank - 1) * 150} Coins` : '100 Coins',
+          isCurrentUser: true,
+        });
+        if (entries.length > 10) {
+          entries.pop();
+        }
+      }
       entries.forEach((e, i) => {
         e.rank = i + 1;
       });
@@ -175,9 +180,9 @@ export const GameLeaderboardService = {
     return {
       game,
       entries: entries.slice(0, 10),
-      userRank: userScore > 0 ? userRank : 84,
+      userRank: userScore > 0 ? userRank : 0,
       userScore,
-      totalParticipants: 1850 + (game.playsCount % 500),
+      totalParticipants: Math.max(entries.length + (userScore > 0 && !entries.some((e) => e.isCurrentUser) ? 1 : 0), 1),
     };
   },
 };

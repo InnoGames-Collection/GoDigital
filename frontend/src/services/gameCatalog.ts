@@ -62,18 +62,18 @@ export const ALL_STANDARD_CATEGORIES = [
 ] as const;
 
 export const MANDATORY_CATALOG_ORDER = [
-  'helix-jump', // 1
-  'bubble-shooter', // 2
-  'emoji-iq', // 3
-  'royal-water-sort', // 4
-  'hill-rider', // 5
-  'sorting-balls', // 6
-  'puzzle-block', // 7
-  'memory-match', // 8
-  'color-rush', // 9
-  'solitaire', // 10
-  'emoji-sorting-ball', // 11
-  'flip-tile', // 12
+  'helix-jump', // 1. Helix Jump
+  'flip-tile', // 2. Flip Tile
+  'bubble-shooter', // 3. Bubble Shooter
+  'emoji-iq', // 4. Emoji IQ
+  'royal-water-sort', // 5. Royal Water Sort
+  'memory-match', // 6. Memory Match
+  'hill-rider', // 7. Hill Climb
+  'sorting-balls', // 8. Sorting Ball
+  'puzzle-block', // 9. Block
+  'color-rush', // 10. Color Rush
+  'solitaire', // 11. Solitaire
+  'emoji-sorting-ball', // 12. Emoji Sorting Ball
 ] as const;
 
 export const INITIAL_GAME_CATALOG: CatalogGame[] = [
@@ -85,12 +85,12 @@ export const INITIAL_GAME_CATALOG: CatalogGame[] = [
     genre: '3D Cylinder Tower Drop Arcade',
     tagline: 'Rotate the central tower, drop through gaps, and conquer 40 levels!',
     description: 'The definitive 40-level 3D Helix Jump experience. Swipe horizontally to rotate the cylindrical tower, guide the bouncing ball through open gaps, land on safe sectors, and trigger fiery multi-level combo smashes.',
-    thumbnail: getGameArtworkUrl('helix-jump'),
-    banner: getGameArtworkUrl('helix-jump'),
-    accessType: 'COIN',
-    isFree: false,
-    requiresCoins: true,
-    coinCost: 2,
+    thumbnail: '/banners/Helix.png',
+    banner: '/banners/Helix.png',
+    accessType: 'FREE',
+    isFree: true,
+    requiresCoins: false,
+    coinCost: 0,
     isFeatured: true,
     isRecommended: true,
     isActive: true,
@@ -98,7 +98,7 @@ export const INITIAL_GAME_CATALOG: CatalogGame[] = [
     leaderboardEnabled: true,
     sortOrder: 0,
     providerId: 'prv_goplay_core',
-    providerName: 'GoPlay Studios',
+    providerName: 'GoDigital Studios',
     rating: 4.99,
     playsCount: 620000,
     primaryColor: '#0284c7',
@@ -118,8 +118,8 @@ export const INITIAL_GAME_CATALOG: CatalogGame[] = [
     genre: 'Hexagonal Bubble Match',
     tagline: 'Aim, reflect wall bank shots, and pop dense glossy bubble clusters!',
     description: 'The tournament edition of the classic Bubble Shooter. Aim the precision dotted laser guide, calculate tactical wall bank shots, trigger satisfying cluster drop cascades, and conquer 40 progressive stages.',
-    thumbnail: getGameArtworkUrl('bubble-shooter'),
-    banner: getGameArtworkUrl('bubble-shooter'),
+    thumbnail: '/banners/bubble%20shooter.png',
+    banner: '/banners/bubble%20shooter.png',
     accessType: 'FREE',
     isFree: true,
     requiresCoins: false,
@@ -131,7 +131,7 @@ export const INITIAL_GAME_CATALOG: CatalogGame[] = [
     leaderboardEnabled: true,
     sortOrder: 1,
     providerId: 'prv_goplay_core',
-    providerName: 'GoPlay Studios',
+    providerName: 'GoDigital Studios',
     rating: 4.98,
     playsCount: 230000,
     primaryColor: '#1788E8',
@@ -145,14 +145,14 @@ export const INITIAL_GAME_CATALOG: CatalogGame[] = [
   },
   {
     gameId: 'emoji-iq',
-    gameName: 'EMOJI IQ',
+    gameName: 'Emoji IQ',
     titleAmharic: 'ኢሞጂ አይኪው',
     category: 'Puzzle',
     genre: 'Tournament Emoji & Number Calculation Challenge',
     tagline: 'Master 40 stages of emoji equations, logical calculations & tournament scoring!',
     description: 'The official EMOJI IQ tournament arena. Solve 12 unique emoji equation puzzle categories across 40 progressive stages with multi-step calculations, order of operations, changed quantities, visual differences, combos, hints, lives, store, and competitive leaderboard.',
-    thumbnail: getGameArtworkUrl('emoji-iq'),
-    banner: getGameArtworkUrl('emoji-iq'),
+    thumbnail: '/banners/emoji%20iq.png',
+    banner: '/banners/emoji%20iq.png',
     accessType: 'FREE',
     isFree: true,
     requiresCoins: false,
@@ -164,7 +164,7 @@ export const INITIAL_GAME_CATALOG: CatalogGame[] = [
     leaderboardEnabled: true,
     sortOrder: 2,
     providerId: 'prv_goplay_core',
-    providerName: 'GoPlay Studios',
+    providerName: 'GoDigital Studios',
     rating: 4.99,
     playsCount: 380000,
     primaryColor: '#6C5CE7',
@@ -185,8 +185,8 @@ export const INITIAL_GAME_CATALOG: CatalogGame[] = [
     genre: '3D Royal Glass Water Sort Puzzle',
     tagline: 'Pour glossy liquid into 3D glass bottles, unlock golden corks, and conquer 40 Championship levels!',
     description: 'The premier 3D glass liquid sorting puzzle experience. Select crystal vials, pour vibrant liquid layers, plan complex multi-color transfers, use Undo, Shuffle & Extra Tube boosters, and conquer 40 Very Difficult royal championship levels.',
-    thumbnail: getGameArtworkUrl('royal-water-sort'),
-    banner: getGameArtworkUrl('royal-water-sort'),
+    thumbnail: '/banners/Royal%20Water%20Sort.png',
+    banner: '/banners/Royal%20Water%20Sort.png',
     accessType: 'FREE',
     isFree: true,
     requiresCoins: false,
@@ -198,7 +198,7 @@ export const INITIAL_GAME_CATALOG: CatalogGame[] = [
     leaderboardEnabled: true,
     sortOrder: 3,
     providerId: 'prv_goplay_core',
-    providerName: 'GoPlay Studios',
+    providerName: 'GoDigital Studios',
     rating: 4.99,
     playsCount: 310000,
     primaryColor: '#38BDF8',
@@ -218,8 +218,8 @@ export const INITIAL_GAME_CATALOG: CatalogGame[] = [
     genre: 'Highland Physics Driving',
     tagline: 'Conquer steep highland ridges and rugged mountain terrains!',
     description: 'Physics-based 2D hill climbing driving game. Control acceleration and vehicle pitch balance over steep highland hills, rocky gorges, and suspension bridges to reach the summit.',
-    thumbnail: getGameArtworkUrl('hill-rider'),
-    banner: getGameArtworkUrl('hill-rider'),
+    thumbnail: '/banners/hill_climb.webp',
+    banner: '/banners/hill_climb.webp',
     accessType: 'FREE',
     isFree: true,
     requiresCoins: false,
@@ -231,7 +231,7 @@ export const INITIAL_GAME_CATALOG: CatalogGame[] = [
     leaderboardEnabled: true,
     sortOrder: 4,
     providerId: 'prv_goplay_core',
-    providerName: 'GoPlay Studios',
+    providerName: 'GoDigital Studios',
     rating: 4.7,
     playsCount: 119800,
     primaryColor: '#0B3B70',
@@ -251,8 +251,8 @@ export const INITIAL_GAME_CATALOG: CatalogGame[] = [
     genre: '3D Color Sorting Puzzle',
     tagline: 'Sort vibrant glossy 3D spheres into glass cylinders across 40 mind-bending levels!',
     description: 'A beautifully relaxing and cerebral 3D color sorting puzzle. Strategically transfer colored spheres between glass cylinders until each tube contains exclusively identical colors.',
-    thumbnail: getGameArtworkUrl('sorting-balls'),
-    banner: getGameArtworkUrl('sorting-balls'),
+    thumbnail: '/banners/sorting%20ball.png',
+    banner: '/banners/sorting%20ball.png',
     accessType: 'FREE',
     isFree: true,
     requiresCoins: false,
@@ -264,7 +264,7 @@ export const INITIAL_GAME_CATALOG: CatalogGame[] = [
     leaderboardEnabled: true,
     sortOrder: 5,
     providerId: 'prv_goplay_core',
-    providerName: 'GoPlay Studios',
+    providerName: 'GoDigital Studios',
     rating: 4.99,
     playsCount: 215000,
     primaryColor: '#FF8A00',
@@ -284,8 +284,8 @@ export const INITIAL_GAME_CATALOG: CatalogGame[] = [
     genre: '10x10 Wooden Block Puzzle',
     tagline: 'Place polyomino blocks on the 10x10 wooden board and clear full rows and columns!',
     description: 'The definitive 10x10 wooden block puzzle experience. Features 40 progressive championship levels, real drag & drop with touch-elevation offset, wood/ice/stone blockers, bomb blocks, and multi-line combo feedback.',
-    thumbnail: getGameArtworkUrl('puzzle-block'),
-    banner: getGameArtworkUrl('puzzle-block'),
+    thumbnail: '/banners/block.png',
+    banner: '/banners/block.png',
     accessType: 'FREE',
     isFree: true,
     requiresCoins: false,
@@ -297,7 +297,7 @@ export const INITIAL_GAME_CATALOG: CatalogGame[] = [
     leaderboardEnabled: true,
     sortOrder: 6,
     providerId: 'prv_goplay_core',
-    providerName: 'GoPlay Studios',
+    providerName: 'GoDigital Studios',
     rating: 4.99,
     playsCount: 520000,
     primaryColor: '#8a3f20',
@@ -317,8 +317,8 @@ export const INITIAL_GAME_CATALOG: CatalogGame[] = [
     genre: '3D Memory Card Pair Matching',
     tagline: 'Test your photographic memory and uncover legendary matching relics!',
     description: 'A premium, high-stakes memory matching experience. Flip beautifully beveled 3D cards, remember mysterious symbols and ancient artifacts, and uncover matching pairs across challenging stages.',
-    thumbnail: getGameArtworkUrl('memory-match'),
-    banner: getGameArtworkUrl('memory-match'),
+    thumbnail: '/banners/memory%20match.png',
+    banner: '/banners/memory%20match.png',
     accessType: 'FREE',
     isFree: true,
     requiresCoins: false,
@@ -330,7 +330,7 @@ export const INITIAL_GAME_CATALOG: CatalogGame[] = [
     leaderboardEnabled: true,
     sortOrder: 7,
     providerId: 'prv_goplay_core',
-    providerName: 'GoPlay Studios',
+    providerName: 'GoDigital Studios',
     rating: 4.95,
     playsCount: 142000,
     primaryColor: '#0B3B70',
@@ -350,8 +350,8 @@ export const INITIAL_GAME_CATALOG: CatalogGame[] = [
     genre: 'Reflex Speed Timing Arcade',
     tagline: 'Test your lightning-fast reflex timing against the chromatic rush!',
     description: 'High-speed reflex reaction test. Match incoming chromatic neon pulses and rotating color gates before the countdown runs out. Speed increases with every successful combo!',
-    thumbnail: getGameArtworkUrl('color-rush'),
-    banner: getGameArtworkUrl('color-rush'),
+    thumbnail: '/banners/color%20rush.png',
+    banner: '/banners/color%20rush.png',
     accessType: 'FREE',
     isFree: true,
     requiresCoins: false,
@@ -363,7 +363,7 @@ export const INITIAL_GAME_CATALOG: CatalogGame[] = [
     leaderboardEnabled: true,
     sortOrder: 8,
     providerId: 'prv_goplay_core',
-    providerName: 'GoPlay Studios',
+    providerName: 'GoDigital Studios',
     rating: 4.8,
     playsCount: 132600,
     primaryColor: '#70C922',
@@ -383,8 +383,8 @@ export const INITIAL_GAME_CATALOG: CatalogGame[] = [
     genre: 'Classic Klondike Solitaire',
     tagline: 'Master authentic 52-card Klondike Solitaire across 40 championship levels!',
     description: 'The definitive Klondike Solitaire experience. Features Draw 1 and Draw 3 modes, authentic playing card artwork, deep emerald felt table acoustics, 40 progressive levels, daily challenge deals, unlimited undo, smart hints, and auto-complete.',
-    thumbnail: getGameArtworkUrl('solitaire'),
-    banner: getGameArtworkUrl('solitaire'),
+    thumbnail: '/banners/solitaire.png',
+    banner: '/banners/solitaire.png',
     accessType: 'FREE',
     isFree: true,
     requiresCoins: false,
@@ -396,7 +396,7 @@ export const INITIAL_GAME_CATALOG: CatalogGame[] = [
     leaderboardEnabled: true,
     sortOrder: 9,
     providerId: 'prv_goplay_core',
-    providerName: 'GoPlay Studios',
+    providerName: 'GoDigital Studios',
     rating: 4.99,
     playsCount: 485000,
     primaryColor: '#007a40',
@@ -410,14 +410,14 @@ export const INITIAL_GAME_CATALOG: CatalogGame[] = [
   },
   {
     gameId: 'emoji-sorting-ball',
-    gameName: 'EMOJI SORTING BALL',
+    gameName: 'Emoji Sorting Ball',
     titleAmharic: 'ኢሞጂ ሶርቲንግ ቦል',
     category: 'Puzzle',
     genre: '3D Emoji Sorting Tournament Puzzle',
     tagline: 'Sort stylized 3D emoji vinyl spheres into color-coded crystal tubes across 40 levels!',
     description: 'The premier 3D Emoji Sorting tournament challenge. Transfer identical emoji spheres between vibrant tubes, utilize sequential multi-ball transfers, manage undos, hints, and buffer tubes, and maximize your tournament par efficiency.',
-    thumbnail: getGameArtworkUrl('emoji-sorting-ball'),
-    banner: getGameArtworkUrl('emoji-sorting-ball'),
+    thumbnail: '/banners/emoji%20sorting%20ball.png',
+    banner: '/banners/emoji%20sorting%20ball.png',
     accessType: 'FREE',
     isFree: true,
     requiresCoins: false,
@@ -429,7 +429,7 @@ export const INITIAL_GAME_CATALOG: CatalogGame[] = [
     leaderboardEnabled: true,
     sortOrder: 10,
     providerId: 'prv_goplay_core',
-    providerName: 'GoPlay Studios',
+    providerName: 'GoDigital Studios',
     rating: 4.99,
     playsCount: 280000,
     primaryColor: '#8B5CF6',
@@ -484,7 +484,7 @@ export const GameCatalog = {
     return INITIAL_GAME_CATALOG.filter((g) => g.isActive)
       .sort((a, b) => (orderIndexMap.get(a.gameId as any) ?? 999) - (orderIndexMap.get(b.gameId as any) ?? 999))
       .map((g) => {
-        const art = getGameArtworkUrl(g.gameId);
+        const art = getGameArtworkUrl(g.gameId) || g.banner;
         return art ? { ...g, thumbnail: art, banner: art } : g;
       });
   },
@@ -492,7 +492,7 @@ export const GameCatalog = {
   getById(gameId: string): CatalogGame | undefined {
     const g = INITIAL_GAME_CATALOG.find((g) => g.gameId === gameId);
     if (!g) return undefined;
-    const art = getGameArtworkUrl(g.gameId);
+    const art = getGameArtworkUrl(g.gameId) || g.banner;
     return art ? { ...g, thumbnail: art, banner: art } : g;
   },
 

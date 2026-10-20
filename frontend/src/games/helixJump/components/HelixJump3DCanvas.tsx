@@ -38,6 +38,28 @@ export const HelixJump3DCanvas: React.FC<HelixJump3DCanvasProps> = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const [floatingTexts, setFloatingTexts] = useState<FloatingScoreText[]>([]);
 
+  // Stable refs for event callbacks to prevent re-instantiating WebGL scene during gameplay
+  const onScoreChangeRef = useRef(onScoreChange);
+  const onProgressChangeRef = useRef(onProgressChange);
+  const onGameOverRef = useRef(onGameOver);
+  const onLevelCompleteRef = useRef(onLevelComplete);
+
+  useEffect(() => {
+    onScoreChangeRef.current = onScoreChange;
+  }, [onScoreChange]);
+
+  useEffect(() => {
+    onProgressChangeRef.current = onProgressChange;
+  }, [onProgressChange]);
+
+  useEffect(() => {
+    onGameOverRef.current = onGameOver;
+  }, [onGameOver]);
+
+  useEffect(() => {
+    onLevelCompleteRef.current = onLevelComplete;
+  }, [onLevelComplete]);
+
   // Refs for animation loop state
   const stateRef = useRef({
     score: 0,
@@ -49,7 +71,6 @@ export const HelixJump3DCanvas: React.FC<HelixJump3DCanvasProps> = ({
     helixAngle: 0,
     helixAngularVelocity: 0,
     lastRingPassedIndex: -1,
-    lastCountedFloorIndex: 0,
     activePlatformY: 0,
     gameOverTriggered: false,
     levelCompleteTriggered: false,
@@ -59,6 +80,7 @@ export const HelixJump3DCanvas: React.FC<HelixJump3DCanvasProps> = ({
     flashingDangerRing: -1,
     flashingDangerTime: 0,
     ringsDestroyed: new Set<number>(),
+    scoredFloors: new Set<number>(),
   });
 
   const isPausedRef = useRef(isPaused);
@@ -92,6 +114,11 @@ export const HelixJump3DCanvas: React.FC<HelixJump3DCanvasProps> = ({
     }, 700);
   }, []);
 
+  const addFloatingScoreRef = useRef(addFloatingScore);
+  useEffect(() => {
+    addFloatingScoreRef.current = addFloatingScore;
+  }, [addFloatingScore]);
+
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
@@ -99,7 +126,7 @@ export const HelixJump3DCanvas: React.FC<HelixJump3DCanvasProps> = ({
     // Reset local simulation state for this level
     const state = stateRef.current;
     state.score = 0;
-    state.lastCountedFloorIndex = 0;
+    state.scoredFloors.clear();
     const ring0TopY = level.rings[0].y + HELIX_DIMENSIONS.PLATFORM_THICKNESS;
     state.ballY = ring0TopY + HELIX_DIMENSIONS.BALL_RADIUS;
     state.ballVy = HELIX_PHYSICS.BOUNCE_IMPULSE;
@@ -114,6 +141,25 @@ export const HelixJump3DCanvas: React.FC<HelixJump3DCanvasProps> = ({
     state.levelCompleteTriggered = false;
     state.squashTime = 0;
     state.ringsDestroyed.clear();
+
+    // Authoritative idempotent floor scoring function:
+    // Tracks each passed floor uniquely by index in scoredFloors Set.
+    // Multiple bounces or repeated collision evaluations never award duplicate points.
+    const recordPassedFloor = (floorIndex: number) => {
+      if (state.gameOverTriggered || state.levelCompleteTriggered) return;
+      let newPoints = 0;
+      for (let k = 0; k <= floorIndex; k++) {
+        if (!state.scoredFloors.has(k)) {
+          state.scoredFloors.add(k);
+          state.score += 1;
+          newPoints += 1;
+        }
+      }
+      if (newPoints > 0) {
+        onScoreChangeRef.current(state.score);
+        addFloatingScoreRef.current(`+${newPoints}`, '#38bdf8');
+      }
+    };
 
     const theme = LEVEL_THEMES[level.themeIndex] || LEVEL_THEMES[0];
 
@@ -410,7 +456,7 @@ export const HelixJump3DCanvas: React.FC<HelixJump3DCanvasProps> = ({
       state.ringsDestroyed.add(ringIndex);
 
       helixAudio.playComboSmash();
-      addFloatingScore(`POWER SMASH!`, '#f59e0b');
+      addFloatingScoreRef.current(`POWER SMASH!`, '#f59e0b');
 
       // Animate fragments outward
       const fragments = ringObj.group.children;
@@ -581,21 +627,24 @@ export const HelixJump3DCanvas: React.FC<HelixJump3DCanvasProps> = ({
                     }
 
                     const progress = Math.min(100, Math.round(((rIdx + 1) / level.rings.length) * 100));
-                    onProgressChange(progress);
+                    onProgressChangeRef.current(progress);
 
                     if (state.comboCount >= 3) {
                       state.isComboSmashing = true;
-                      addFloatingScore(`x${state.comboCount} COMBO!`, '#f59e0b');
+                      addFloatingScoreRef.current(`x${state.comboCount} COMBO!`, '#f59e0b');
                     }
 
                     helixAudio.playGapPass(state.comboCount);
                   }
+                  // Idempotently record floor rIdx as passed and scored
+                  recordPassedFloor(rIdx);
                   // Continue loop to check deeper platforms in this sub-step
                 } else if (touchesDanger || sectorUnderBall.type === 'danger') {
                   // FIX 6: HIT DANGER SECTOR (RED FAILURE REACTION)
                   if (state.isComboSmashing) {
                     // Power smash through danger platform with 3+ combo!
                     shatterRing(rIdx);
+                    recordPassedFloor(rIdx);
                     state.isComboSmashing = false;
                     state.comboCount = 0;
                     if (rIdx + 1 < level.rings.length) {
@@ -676,7 +725,7 @@ export const HelixJump3DCanvas: React.FC<HelixJump3DCanvasProps> = ({
 
                     // 7. Transition to failure after natural recoil, tumble, and fall (680ms)
                     setTimeout(() => {
-                      onGameOver(state.score);
+                      onGameOverRef.current(state.score);
                     }, 680);
                     break;
                   }
@@ -689,30 +738,22 @@ export const HelixJump3DCanvas: React.FC<HelixJump3DCanvasProps> = ({
                     state.ballY = platformTop + HELIX_DIMENSIONS.BALL_RADIUS;
                     state.ballVy = HELIX_PHYSICS.BOUNCE_IMPULSE * 0.8;
                     collidedThisStep = true;
-                    onProgressChange(100);
+                    onProgressChangeRef.current(100);
 
-                    if (rIdx > state.lastCountedFloorIndex) {
-                      state.lastCountedFloorIndex = rIdx;
-                      state.score += 1;
-                      onScoreChange(state.score);
-                    }
+                    recordPassedFloor(rIdx);
 
                     helixAudio.playLevelComplete();
 
                     setTimeout(() => {
-                      onLevelComplete(state.score);
+                      onLevelCompleteRef.current(state.score);
                     }, 750);
                     break;
                   } else if (state.isComboSmashing) {
                     // POWER SMASH THROUGH SAFE PLATFORM!
                     shatterRing(rIdx);
+                    recordPassedFloor(rIdx);
                     state.isComboSmashing = false;
                     state.comboCount = 0;
-                    if (rIdx > state.lastCountedFloorIndex) {
-                      state.lastCountedFloorIndex = rIdx;
-                      state.score += 1;
-                      onScoreChange(state.score);
-                    }
                     if (rIdx + 1 < level.rings.length) {
                       state.activePlatformY = level.rings[rIdx + 1].y;
                     }
@@ -729,15 +770,12 @@ export const HelixJump3DCanvas: React.FC<HelixJump3DCanvasProps> = ({
                     state.squashTime = 0.08; // trigger contact compression squash
                     state.activePlatformY = ring.y;
 
-                    // Exact scoring rule:
-                    // SAME FLOOR -> NO SCORE (repeated bounces ignored)
-                    // NEXT LOWER FLOOR -> +1 SCORE
-                    if (rIdx > state.lastCountedFloorIndex) {
-                      state.lastCountedFloorIndex = rIdx;
-                      state.score += 1;
-                      onScoreChange(state.score);
-                      addFloatingScore('+1', '#38bdf8');
+                    // Ensure all floors above the landing floor are scored
+                    if (rIdx > 0) {
+                      recordPassedFloor(rIdx - 1);
                     }
+                    // Crucial: normal bounce on ring rIdx NEVER awards points for ring rIdx.
+                    // Repeated bounces on the same floor will never increment score.
 
                     helixAudio.playBounce();
                     addPaintSplatter(ring.y, state.helixAngle);
@@ -759,7 +797,7 @@ export const HelixJump3DCanvas: React.FC<HelixJump3DCanvasProps> = ({
         if (state.ballY < failureBoundary && !state.gameOverTriggered && !state.levelCompleteTriggered) {
           state.gameOverTriggered = true;
           state.ballVy = 0;
-          onGameOver(state.score);
+          onGameOverRef.current(state.score);
         }
       }
 
@@ -919,7 +957,8 @@ export const HelixJump3DCanvas: React.FC<HelixJump3DCanvasProps> = ({
         container.removeChild(renderer.domElement);
       }
     };
-  }, [level, onScoreChange, onProgressChange, onGameOver, onLevelComplete, addFloatingScore]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [level.id, level.themeIndex]);
 
   return (
     <div

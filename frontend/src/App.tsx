@@ -11,7 +11,8 @@ import { EntitlementService } from './services/entitlementService';
 import { Header } from './components/Header';
 import { BottomNav } from './components/BottomNav';
 import { NotificationToast } from './components/NotificationToast';
-import { GoPlayLogo } from './components/GoPlayLogo';
+import { GoDigitalLogo } from './components/GoDigitalLogo';
+import { CinematicPortalBackground } from './components/CinematicPortalBackground';
 
 // Modals
 import { GameLauncherModal } from './components/GameLauncherModal';
@@ -20,6 +21,9 @@ import { CoinTopupModal } from './components/CoinTopupModal';
 import { GameDetailsModal } from './components/GameDetailsModal';
 import { TermsAndPrivacyModal } from './components/TermsAndPrivacyModal';
 import { MainMenuDrawer, MainMenuSection } from './components/MainMenuDrawer';
+import { PortalSectionId } from './utils/navigationConfig';
+import { NotificationModal } from './components/NotificationModal';
+import { notificationService, NotificationItem } from './services/notificationService';
 
 // Pages
 import { HomePage } from './pages/HomePage';
@@ -27,13 +31,14 @@ import { GamesPage } from './pages/GamesPage';
 import { TournamentPage } from './pages/TournamentPage';
 import { LeaderboardPage } from './pages/LeaderboardPage';
 import { ProfilePage } from './pages/ProfilePage';
-import { GamesContentPage } from './pages/content/GamesContentPage';
+import { MyGamesPage } from './pages/content/MyGamesPage';
 import { FAQPage } from './pages/content/FAQPage';
 import { HelpSupportPage } from './pages/content/HelpSupportPage';
 import { SubscriptionPage } from './pages/content/SubscriptionPage';
 import { PricingPage } from './pages/content/PricingPage';
 import { TermsPage } from './pages/content/TermsPage';
 import { PrivacyPage } from './pages/content/PrivacyPage';
+import { MyScoresPage } from './pages/content/MyScoresPage';
 
 export default function App() {
   const {
@@ -69,6 +74,12 @@ export default function App() {
   const [isAppLaunching, setIsAppLaunching] = useState(true);
   const [isMainMenuOpen, setIsMainMenuOpen] = useState(false);
   const [contentView, setContentView] = useState<MainMenuSection | null>(null);
+  const [profileResetKey, setProfileResetKey] = useState(0);
+
+  // Notification Center State
+  const [isNotificationModalOpen, setIsNotificationModalOpen] = useState(false);
+  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+  const [unreadNotificationsCount, setUnreadNotificationsCount] = useState<number>(0);
 
   // Game Access & Modals State
   const [pendingAccessGame, setPendingAccessGame] = useState<GameDefinition | null>(null);
@@ -83,19 +94,139 @@ export default function App() {
     return () => clearTimeout(timer);
   }, []);
 
-  // Handle browser back button when a content page is open
+  // Fetch notifications and subscribe to real-time Server-Sent Events (SSE)
+  useEffect(() => {
+    let unsubscribe: (() => void) | null = null;
+    const loadAndSubscribe = async () => {
+      const userPhone = profile?.phoneNumber || '0911223344';
+      const initial = await notificationService.fetchNotifications(userPhone);
+      setNotifications(initial.notifications);
+      setUnreadNotificationsCount(initial.unreadCount);
+
+      unsubscribe = notificationService.subscribeRealtime(
+        userPhone,
+        (newNotif) => {
+          setNotifications((prev) => {
+            const exists = prev.some((n) => n.id === newNotif.id);
+            if (exists) return prev;
+            return [newNotif, ...prev];
+          });
+          setUnreadNotificationsCount((prev) => prev + 1);
+        },
+        (updatedCount) => {
+          setUnreadNotificationsCount(updatedCount);
+        }
+      );
+    };
+
+    loadAndSubscribe();
+
+    return () => {
+      if (unsubscribe) unsubscribe();
+    };
+  }, [profile?.phoneNumber]);
+
+  // Handle browser / platform back button across modals, content view, and menu drawer
   useEffect(() => {
     const handlePopState = () => {
+      if (activeGameToLaunch !== null) {
+        closeGameLauncher();
+        return;
+      }
+      if (isCoinTopupOpen) {
+        setIsCoinTopupOpen(false);
+        return;
+      }
+      if (selectedGameForDetails !== null) {
+        setSelectedGameForDetails(null);
+        return;
+      }
+      if (pendingAccessGame !== null) {
+        setPendingAccessGame(null);
+        return;
+      }
+      if (isNotificationModalOpen) {
+        setIsNotificationModalOpen(false);
+        return;
+      }
+      if (isMainMenuOpen) {
+        setIsMainMenuOpen(false);
+        return;
+      }
       if (contentView !== null) {
         setContentView(null);
+        return;
       }
     };
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
-  }, [contentView]);
+  }, [
+    activeGameToLaunch,
+    isCoinTopupOpen,
+    selectedGameForDetails,
+    pendingAccessGame,
+    contentView,
+    isMainMenuOpen,
+    isNotificationModalOpen,
+    closeGameLauncher,
+  ]);
+
+  const handleOpenNotifications = () => {
+    window.history.pushState({ notificationsOpen: true }, '');
+    setIsNotificationModalOpen(true);
+  };
+
+  const handleMarkNotificationRead = async (id: string) => {
+    setNotifications((prev) =>
+      prev.map((n) => (n.id === id ? { ...n, is_read: true } : n))
+    );
+    setUnreadNotificationsCount((prev) => Math.max(0, prev - 1));
+    await notificationService.markAsRead(id);
+  };
+
+  const handleMarkAllNotificationsRead = async () => {
+    setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
+    setUnreadNotificationsCount(0);
+    const userPhone = profile?.phoneNumber || '0911223344';
+    await notificationService.markAllAsRead(userPhone);
+  };
+
+  const handleNotificationAction = (url: string) => {
+    if (url === '/tournament' || url.includes('tournament')) {
+      setActiveTab('tournament');
+    } else if (url === '/leaderboard' || url.includes('leaderboard')) {
+      setActiveTab('leaderboard');
+    } else if (url === '/profile' || url.includes('profile')) {
+      setActiveTab('profile');
+    } else if (url === '/games' || url.includes('games')) {
+      setActiveTab('games');
+    } else if (url.includes('helix') || url.includes('helix-jump')) {
+      const helix = GameRegistry.getGameById('helix-jump');
+      if (helix) handlePlayGame(helix);
+    } else if (url.includes('coins') || url.includes('topup')) {
+      setIsCoinTopupOpen(true);
+    }
+  };
+
+  const handleOpenMainMenu = () => {
+    window.history.pushState({ menuOpen: true }, '');
+    setIsMainMenuOpen(true);
+  };
+
+  const handleCloseMainMenu = () => {
+    setIsMainMenuOpen(false);
+    if (window.history.state?.menuOpen) {
+      window.history.back();
+    }
+  };
 
   const navigateToContentSection = (section: MainMenuSection) => {
-    window.history.pushState({ contentView: section }, '');
+    setIsMainMenuOpen(false);
+    if (window.history.state?.menuOpen) {
+      window.history.replaceState({ contentView: section }, '');
+    } else {
+      window.history.pushState({ contentView: section }, '');
+    }
     setContentView(section);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -139,42 +270,43 @@ export default function App() {
   // Splash Screen
   if (isAppLaunching) {
     return (
-      <div className="fixed inset-0 z-50 bg-[#0B0D14] text-white flex flex-col items-center justify-center p-6 text-center select-none animate-in fade-in duration-200">
-        <div className="bg-[#181C29] border border-[#282E3D] p-3.5 rounded-2xl shadow-xl mb-4 flex items-center justify-center">
-          <GoPlayLogo size="xl" variant="dark" />
+      <div className="fixed inset-0 z-50 bg-[#24170F] text-[#FFF0CF] flex flex-col items-center justify-center p-6 text-center select-none animate-in fade-in duration-200">
+        <div className="bg-[#352316] border border-[#81502B] p-4 rounded-3xl shadow-2xl mb-4 flex items-center justify-center">
+          <GoDigitalLogo size="xl" showSubtitle={true} />
         </div>
-        <h1 className="text-2xl font-black tracking-tight text-white flex items-center gap-1.5">
-          <span>GoPlay</span>
-        </h1>
-        <p className="text-xs text-[#AEB6C7] mt-1 font-medium">Premium Gaming Portal</p>
-        <div className="mt-6 flex items-center gap-1.5">
-          <div className="w-2 h-2 rounded-full bg-[#7C3AED] animate-bounce" style={{ animationDelay: '0ms' }} />
-          <div className="w-2 h-2 rounded-full bg-[#7C3AED] animate-bounce" style={{ animationDelay: '150ms' }} />
-          <div className="w-2 h-2 rounded-full bg-[#22D3EE] animate-bounce" style={{ animationDelay: '300ms' }} />
+        <p className="text-xs text-[#E6C8A4] font-medium tracking-wider uppercase mt-1">Official Gaming Portal</p>
+        <div className="mt-6 flex items-center gap-2">
+          <div className="w-2.5 h-2.5 rounded-full bg-[#FFD35A] animate-bounce shadow-[0_0_8px_rgba(255,211,90,0.7)]" style={{ animationDelay: '0ms' }} />
+          <div className="w-2.5 h-2.5 rounded-full bg-[#FFAA24] animate-bounce shadow-[0_0_8px_rgba(255,170,36,0.7)]" style={{ animationDelay: '150ms' }} />
+          <div className="w-2.5 h-2.5 rounded-full bg-[#F47B20] animate-bounce shadow-[0_0_8px_rgba(244,123,32,0.7)]" style={{ animationDelay: '300ms' }} />
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#0B0D14] text-white flex flex-col font-['Plus_Jakarta_Sans',sans-serif] selection:bg-[#7C3AED] selection:text-white">
+    <div className="min-h-screen bg-[#24170F] text-[#FFF0CF] flex flex-col font-['Plus_Jakarta_Sans',sans-serif] selection:bg-[#FFAA24] selection:text-[#24170F] relative">
+      {/* Cinematic Adventure-Gaming Sunset Background */}
+      <CinematicPortalBackground />
       
       {/* 1. Global Native Mini-App Header */}
       <Header
         profile={profile}
+        unreadNotificationsCount={unreadNotificationsCount}
         onOpenBuyCoins={() => setIsCoinTopupOpen(true)}
-        onOpenMenu={() => setIsMainMenuOpen(true)}
+        onOpenMenu={handleOpenMainMenu}
+        onOpenNotifications={handleOpenNotifications}
       />
 
       {/* 2. Main Dynamic Content Area */}
       <main className="flex-1 w-full">
-        {/* Content Pages from Main Menu */}
-        {contentView === 'games' && (
+        {/* Content Pages from Main Menu & Profile */}
+        {(contentView === 'my_games' || (contentView as string) === 'games') && (
           <div className="py-2">
-            <GamesContentPage
+            <MyGamesPage
               games={allGames}
               profile={profile}
-              onLaunchGame={handlePlayGame}
+              onPlayGame={handlePlayGame}
               onBack={handleBackFromContent}
               showHeader={true}
             />
@@ -238,6 +370,16 @@ export default function App() {
           </div>
         )}
 
+        {contentView === 'my_scores' && (
+          <div className="py-2">
+            <MyScoresPage
+              profile={profile}
+              onBack={handleBackFromContent}
+              showHeader={true}
+            />
+          </div>
+        )}
+
         {/* Tab Views (Active when no top-level content view is open) */}
         {contentView === null && (
           <>
@@ -252,6 +394,7 @@ export default function App() {
                   setSelectedCategoryFilter(category || 'All Games');
                   setActiveTab('games');
                 }}
+                onNavigateToTournament={() => setActiveTab('tournament')}
                 activeEntitlements={activeEntitlements}
               />
             )}
@@ -283,6 +426,7 @@ export default function App() {
 
             {activeTab === 'profile' && (
               <ProfilePage
+                key={`profile-page-${profileResetKey}`}
                 profile={profile}
                 games={allGames}
                 language={language}
@@ -290,6 +434,8 @@ export default function App() {
                 onPlayGame={handlePlayGame}
                 onOpenBuyCoins={() => setIsCoinTopupOpen(true)}
                 onProfileUpdate={setProfile}
+                onOpenMenu={handleOpenMainMenu}
+                onNavigateToSection={navigateToContentSection}
               />
             )}
           </>
@@ -299,20 +445,32 @@ export default function App() {
       {/* 3. Main Menu Drawer */}
       <MainMenuDrawer
         isOpen={isMainMenuOpen}
-        onClose={() => setIsMainMenuOpen(false)}
-        onSelectSection={(sec) => navigateToContentSection(sec)}
+        onClose={handleCloseMainMenu}
+        onSelectSection={navigateToContentSection}
+        activeSection={contentView}
       />
 
       {/* 4. Mobile-First Bottom Navigation Bar (5 Tabs) */}
       <BottomNav
-        activeTab={activeTab}
-        onTabChange={(tab) => setActiveTab(tab)}
+        activeTab={contentView ? ('' as any) : activeTab}
+        onTabChange={(tab) => {
+          if (isMainMenuOpen) {
+            handleCloseMainMenu();
+          }
+          if (contentView) {
+            setContentView(null);
+          }
+          if (tab === 'profile' && activeTab === 'profile' && !contentView) {
+            setProfileResetKey((k) => k + 1);
+          }
+          setActiveTab(tab);
+        }}
         labels={{
-          home: 'HOME',
-          games: 'GAMES',
-          tournament: 'TOURNAMENT',
-          leaderboard: 'LEADERBOARD',
-          profile: 'PROFILE',
+          home: 'Home',
+          games: 'Game',
+          tournament: 'Tournament',
+          leaderboard: 'Leaderboard',
+          profile: 'Profile',
         }}
       />
 
@@ -374,7 +532,18 @@ export default function App() {
         />
       )}
 
-      {/* 10. Floating Toast Notifications */}
+      {/* 10. Real-time Notification Center Modal */}
+      <NotificationModal
+        isOpen={isNotificationModalOpen}
+        onClose={() => setIsNotificationModalOpen(false)}
+        notifications={notifications}
+        unreadCount={unreadNotificationsCount}
+        onMarkAsRead={handleMarkNotificationRead}
+        onMarkAllAsRead={handleMarkAllNotificationsRead}
+        onNavigateAction={handleNotificationAction}
+      />
+
+      {/* 11. Floating Toast Notifications */}
       <NotificationToast toasts={toasts} onDismiss={dismissToast} />
     </div>
   );

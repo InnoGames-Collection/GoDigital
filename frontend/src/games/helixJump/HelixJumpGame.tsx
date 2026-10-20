@@ -26,6 +26,7 @@ import { LeaderboardModal } from './components/LeaderboardModal';
 
 interface HelixJumpGameProps {
   onExit: () => void;
+  onGameOver?: (finalScore: number) => void;
 }
 
 const DEFAULT_SAVE_DATA: HelixJumpSaveData = {
@@ -68,7 +69,7 @@ function evaluateAchievements(data: HelixJumpSaveData): HelixJumpSaveData {
   };
 }
 
-export const HelixJumpGame: React.FC<HelixJumpGameProps> = ({ onExit }) => {
+export const HelixJumpGame: React.FC<HelixJumpGameProps> = ({ onExit, onGameOver }) => {
   // Load saved progress from localStorage
   const [saveData, setSaveData] = useState<HelixJumpSaveData>(() => {
     if (typeof window !== 'undefined') {
@@ -146,6 +147,7 @@ export const HelixJumpGame: React.FC<HelixJumpGameProps> = ({ onExit }) => {
   const handleGameOver = useCallback(
     (finalScore: number) => {
       setScore(finalScore);
+      onGameOver?.(finalScore);
       updateAndPersistSaveData((prev) => {
         const prevBestLevel = prev.bestScores[currentLevelId] || 0;
         const newOverallBest = Math.max(prev.bestScore || 0, finalScore);
@@ -162,13 +164,14 @@ export const HelixJumpGame: React.FC<HelixJumpGameProps> = ({ onExit }) => {
       });
       setGameState('GAME_OVER');
     },
-    [currentLevelId, updateAndPersistSaveData]
+    [currentLevelId, onGameOver, updateAndPersistSaveData]
   );
 
   // Handle Level Complete
   const handleLevelComplete = useCallback(
     (finalScore: number) => {
       setScore(finalScore);
+      onGameOver?.(finalScore);
 
       // Calculate 1-3 stars
       const thresholds = currentLevelDef.starThresholds;
@@ -209,7 +212,7 @@ export const HelixJumpGame: React.FC<HelixJumpGameProps> = ({ onExit }) => {
         setGameState('LEVEL_COMPLETE');
       }
     },
-    [currentLevelDef, currentLevelId, updateAndPersistSaveData]
+    [currentLevelDef, currentLevelId, onGameOver, updateAndPersistSaveData]
   );
 
   // Reset Progress

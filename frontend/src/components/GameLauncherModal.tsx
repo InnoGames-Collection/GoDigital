@@ -53,6 +53,7 @@ export const GameLauncherModal: React.FC<GameLauncherModalProps> = ({
       <div className="fixed inset-0 z-50 bg-[#090A10] flex flex-col justify-center items-center overflow-hidden animate-in fade-in duration-200 font-['Plus_Jakarta_Sans',sans-serif] touch-none overscroll-none select-none">
         <HelixJumpGame
           onExit={onClose}
+          onGameOver={(score) => handleGameEnd(score, 60)}
         />
       </div>
     );

@@ -8,8 +8,8 @@ import { GameCatalog, CatalogGame } from '../services/gameCatalog';
 import { getGameArtworkUrl } from '../services/gameArtwork';
 
 export function catalogGameToDefinition(g: CatalogGame): GameDefinition {
-  const artwork = getGameArtworkUrl(g.gameId);
-  const isFreeDirectGame = g.gameId !== 'helix-jump';
+  const artwork = getGameArtworkUrl(g.gameId) || g.banner;
+  const isFreeDirectGame = g.isFree || g.accessType === 'FREE' || !g.requiresCoins;
 
   return {
     id: g.gameId,

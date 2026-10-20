@@ -5,7 +5,9 @@
 
 import { UserProfile, LeaderboardEntry, Tournament } from '../types';
 
-const API_BASE = '/api';
+const API_BASE = typeof window !== 'undefined' 
+  ? '/api' 
+  : (process?.env?.API_BASE_URL || 'http://localhost:3702/api');
 
 class ApiService {
   private token: string | null = null;
@@ -67,6 +69,40 @@ class ApiService {
   }
 
   /**
+   * Request an SMS OTP from backend
+   */
+  async requestOtp(phoneNumber: string): Promise<{ success: boolean; message: string; demoOtp?: string } | null> {
+    return this.request<{ success: boolean; message: string; demoOtp?: string }>('/auth/request-otp', {
+      method: 'POST',
+      body: JSON.stringify({ phoneNumber }),
+    });
+  }
+
+  /**
+   * Verify an SMS OTP with backend and receive JWT + UserProfile
+   */
+  async verifyOtp(phoneNumber: string, otp: string): Promise<{ success: boolean; message: string; profile?: UserProfile } | null> {
+    const res = await this.request<{
+      success: boolean;
+      message: string;
+      profile?: UserProfile;
+      tokens?: { accessToken: string; refreshToken: string };
+    }>('/auth/verify-otp', {
+      method: 'POST',
+      body: JSON.stringify({ phoneNumber, otp }),
+    });
+
+    if (res?.success && res.profile) {
+      if (res.tokens?.accessToken) {
+        this.setToken(res.tokens.accessToken);
+      }
+      return { success: true, message: res.message, profile: res.profile };
+    }
+
+    return res ? { success: false, message: res.message } : null;
+  }
+
+  /**
    * Authenticate via Telebirr Game Center and load real PostgreSQL UserProfile
    */
   async loginWithTelebirr(phoneNumber?: string, token?: string): Promise<UserProfile | null> {
@@ -87,6 +123,13 @@ class ApiService {
     }
 
     return null;
+  }
+
+  /**
+   * Fetch authoritative game catalog from PostgreSQL
+   */
+  async getGameCatalog(): Promise<{ success: boolean; games: any[] } | null> {
+    return this.request<{ success: boolean; games: any[] }>('/game/catalog');
   }
 
   /**
@@ -138,6 +181,23 @@ class ApiService {
   }
 
   /**
+   * Submit authoritative tournament score to PostgreSQL
+   */
+  async submitTournamentScore(
+    tournamentId: string,
+    score: number,
+    gameId?: string
+  ): Promise<{ success: boolean; message: string; bestScore?: number; rank?: number } | null> {
+    return this.request<{ success: boolean; message: string; bestScore?: number; rank?: number }>(
+      `/tournaments/${tournamentId}/submit`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ score, gameId }),
+      }
+    );
+  }
+
+  /**
    * Submit authoritative game score with anti-cheat round token
    */
   async submitScore(
@@ -174,7 +234,7 @@ class ApiService {
   }
 
   /**
-   * Purchase GoPlay Coins via Telebirr (10 coins for 10 ETB, 30 for 30 ETB, 50 for 50 ETB)
+   * Purchase GoDigital Coins via Telebirr (10 coins for 10 ETB, 30 for 30 ETB, 50 for 50 ETB)
    */
   async buyCoins(packageId: 'COIN_PACK_10' | 'COIN_PACK_30' | 'COIN_PACK_50' = 'COIN_PACK_10'): Promise<{ success: boolean; checkoutUrl?: string; message?: string }> {
     const res = await this.request<{

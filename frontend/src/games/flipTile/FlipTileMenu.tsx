@@ -52,7 +52,7 @@ export const FlipTileMenu: React.FC<FlipTileMenuProps> = ({
           className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-white/10 border border-white/20 text-xs font-black text-amber-300 hover:bg-white/20 active:scale-95 transition-all shadow-xs cursor-pointer"
         >
           <ArrowLeft className="w-3.5 h-3.5 stroke-[2.5]" />
-          <span>GoPlay</span>
+          <span>GoDigital</span>
         </button>
 
         <div className="flex items-center gap-2">

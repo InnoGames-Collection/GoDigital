@@ -90,15 +90,12 @@ export function usePortalState() {
   const t = TRANSLATIONS[language] || TRANSLATIONS.en;
 
   const showToast = useCallback((type: ToastMessage['type'], title: string, description?: string) => {
-    const id = 'toast_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6);
-    setToasts((prev) => [...prev, { id, type, title, description }]);
-    setTimeout(() => {
-      setToasts((prev) => prev.filter((item) => item.id !== id));
-    }, 4000);
+    // Preserve internal observability through diagnostic logging while suppressing intrusive floating pop-ups
+    console.log(`[GoDigital Event] [${type.toUpperCase()}] ${title}${description ? ` - ${description}` : ''}`);
   }, []);
 
-  const dismissToast = useCallback((id: string) => {
-    setToasts((prev) => prev.filter((item) => item.id !== id));
+  const dismissToast = useCallback((_id: string) => {
+    // No-op since transient floating queue is suppressed
   }, []);
 
   // Energy auto-refill interval
@@ -352,28 +349,25 @@ export function usePortalState() {
     });
 
     if (payResult.status === 'SUCCESS') {
-      const updated: UserProfile = {
-        ...profile,
-        telebirrBalance: Number((profile.telebirrBalance - costETB).toFixed(2)),
-        energy: profile.energy + energyAmount,
-        maxEnergy: Math.max(profile.maxEnergy, profile.energy + energyAmount),
-        lastEnergyRefillTimestamp: Date.now(),
-      };
-
-      setProfile(updated);
-      StorageService.saveProfile(updated);
-
-      // Record Energy Transaction
-      const energyTx: EnergyTransaction = {
-        transactionId: payResult.transaction.transactionId,
-        type: 'PURCHASE_TELEBIRR',
-        amount: energyAmount,
-        timestamp: new Date().toISOString(),
-        status: 'COMPLETED',
-        details: `TeleBirr Purchase (${costETB} ETB)`,
-      };
-      StorageService.recordEnergyTransaction(energyTx);
-      setEnergyTransactions(StorageService.getEnergyTransactions());
+      try {
+        const freshProfile = await apiService.getProfile();
+        if (freshProfile) {
+          setProfile(freshProfile);
+          StorageService.saveProfile(freshProfile);
+        } else {
+          setProfile((curr) => {
+            const upd = { ...curr, energy: curr.energy + energyAmount };
+            StorageService.saveProfile(upd);
+            return upd;
+          });
+        }
+      } catch {
+        setProfile((curr) => {
+          const upd = { ...curr, energy: curr.energy + energyAmount };
+          StorageService.saveProfile(upd);
+          return upd;
+        });
+      }
 
       showToast('success', `+${energyAmount} Energy Added!`, `Charged ${costETB} ETB via TeleBirr.`);
       return { success: true, message: `Successfully purchased ${energyAmount} Energy for ${costETB} ETB.` };
@@ -390,49 +384,32 @@ export function usePortalState() {
   }, [purchaseEnergyPackage]);
 
   // Daily Streak Claim
-  const claimDailyStreak = useCallback(() => {
-    const today = new Date().toISOString().slice(0, 10);
-    if (profile.streak.hasClaimedToday && profile.streak.lastClaimedDate === today) {
-      showToast('info', 'Already Claimed', 'Come back tomorrow for the next streak bonus!');
-      return;
+  const claimDailyStreak = useCallback(async () => {
+    try {
+      const res = await apiService.claimDailyStreak();
+      if (res && res.success) {
+        setProfile((curr) => {
+          const upd: UserProfile = {
+            ...curr,
+            coins: typeof res.newBalance === 'number' ? res.newBalance : curr.coins + (res.coinsAwarded || 10),
+            streak: {
+              current: res.currentStreak || curr.streak.current + 1,
+              lastClaimedDate: new Date().toISOString().slice(0, 10),
+              hasClaimedToday: true,
+            },
+          };
+          StorageService.saveProfile(upd);
+          return upd;
+        });
+
+        showToast('success', `Streak Bonus Claimed!`, `+${res.coinsAwarded} Coins awarded (Day ${res.currentStreak}).`);
+      } else {
+        showToast('info', 'Daily Streak', res?.message || 'Daily streak bonus already claimed for today.');
+      }
+    } catch (err: any) {
+      showToast('error', 'Streak Claim Error', err.message || 'Failed to claim daily streak bonus.');
     }
-
-    const streakIndex = (profile.streak.current - 1) % DAILY_REWARD_LADDER.length;
-    const reward = DAILY_REWARD_LADDER[streakIndex];
-
-    const newCoins = profile.coins + reward.coins;
-    const newEnergy = Math.min(profile.maxEnergy, profile.energy + reward.energy);
-    const nextStreak = profile.streak.current + 1;
-
-    const updated: UserProfile = {
-      ...profile,
-      coins: newCoins,
-      energy: newEnergy,
-      streak: {
-        current: nextStreak,
-        lastClaimedDate: today,
-        hasClaimedToday: true,
-      },
-    };
-
-    setProfile(updated);
-    StorageService.saveProfile(updated);
-
-    if (reward.energy > 0) {
-      const tx: EnergyTransaction = {
-        transactionId: 'ETX_STREAK_' + Date.now().toString(36).toUpperCase(),
-        type: 'DAILY_REWARD',
-        amount: reward.energy,
-        timestamp: new Date().toISOString(),
-        status: 'COMPLETED',
-        details: `Day ${reward.day} Streak Bonus`,
-      };
-      StorageService.recordEnergyTransaction(tx);
-      setEnergyTransactions(StorageService.getEnergyTransactions());
-    }
-
-    showToast('success', `Day ${reward.day} Streak Claimed!`, `+${reward.coins} Coins & +${reward.energy} Energy added.`);
-  }, [profile, showToast]);
+  }, [showToast]);
 
   // Claim Reward Prize
   const handleClaimReward = useCallback(async (rewardId: string) => {

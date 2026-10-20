@@ -6,6 +6,7 @@
 
 import { UserProfile } from '../types';
 import { StorageService } from './storageService';
+import { apiService } from './apiService';
 
 export interface AuthResponse {
   success: boolean;
@@ -15,94 +16,61 @@ export interface AuthResponse {
 
 export const AuthService = {
   /**
-   * Request 6-digit OTP code via EthioTelecom SMS gateway
+   * Request 6-digit OTP code via backend EthioTelecom SMS gateway
    */
-  async requestOtp(phoneNumber: string): Promise<{ success: boolean; message: string; demoOtp: string }> {
-    // Validate Ethiopian phone format
-    const cleaned = phoneNumber.replace(/\D/g, '');
-    const isEthio = cleaned.startsWith('2519') || cleaned.startsWith('2517') || cleaned.startsWith('09') || cleaned.startsWith('07') || cleaned.length === 9 || cleaned.length === 10 || cleaned.length === 12;
-    
-    if (!isEthio) {
+  async requestOtp(phoneNumber: string): Promise<{ success: boolean; message: string; demoOtp?: string }> {
+    const res = await apiService.requestOtp(phoneNumber);
+    if (res && res.success) {
       return {
-        success: false,
-        message: 'Please enter a valid EthioTelecom phone number starting with 09 or 07.',
-        demoOtp: '',
+        success: true,
+        message: res.message,
+        demoOtp: res.demoOtp,
       };
     }
 
-    // Generate fixed 6-digit demo OTP for immediate testing
-    const demoOtp = '123456';
-    
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        resolve({
-          success: true,
-          message: `SMS Verification code sent to ${phoneNumber}. [Demo OTP: 123456]`,
-          demoOtp,
-        });
-      }, 500);
-    });
+    return {
+      success: false,
+      message: res?.message || 'Failed to dispatch verification code. Please check your phone number.',
+    };
   },
 
   /**
-   * Verify 6-digit OTP and log in
+   * Verify 6-digit OTP against backend database and log in
    */
   async verifyOtp(phoneNumber: string, otp: string): Promise<AuthResponse> {
-    const trimmedOtp = otp.trim();
-    if (trimmedOtp !== '123456' && trimmedOtp.length !== 6) {
+    const res = await apiService.verifyOtp(phoneNumber, otp);
+    if (res && res.success && res.profile) {
+      StorageService.saveProfile(res.profile);
       return {
-        success: false,
-        message: 'Invalid 6-digit verification code. Please use demo code 123456.',
+        success: true,
+        message: res.message || 'Successfully authenticated with EthioTelecom.',
+        profile: res.profile,
       };
     }
 
-    const current = StorageService.getProfile();
-    // Clean and normalize phone number (e.g. 0912345678)
-    let normalizedPhone = phoneNumber.replace(/\D/g, '');
-    if (normalizedPhone.startsWith('251')) {
-      normalizedPhone = '0' + normalizedPhone.slice(3);
-    }
-    if (!normalizedPhone.startsWith('0') && (normalizedPhone.startsWith('9') || normalizedPhone.startsWith('7'))) {
-      normalizedPhone = '0' + normalizedPhone;
-    }
-    if (!normalizedPhone) normalizedPhone = '0912345678';
-
-    const updated: UserProfile = {
-      ...current,
-      phoneNumber: normalizedPhone,
-      isRegistered: true,
-      telebirrLinked: true,
-    };
-
-    StorageService.saveProfile(updated);
-
     return {
-      success: true,
-      message: 'Successfully authenticated with EthioTelecom.',
-      profile: updated,
+      success: false,
+      message: res?.message || 'Invalid or expired 6-digit verification code.',
     };
   },
 
   /**
-   * Fast TeleBirr One-Click Authenticator
+   * Authoritative TeleBirr Direct Connect Authenticator
    */
-  async loginWithTeleBirr(): Promise<AuthResponse> {
-    const current = StorageService.getProfile();
-    const updated: UserProfile = {
-      ...current,
-      phoneNumber: '0911428890',
-      displayName: 'EthioTelecom Gamer',
-      isRegistered: true,
-      telebirrLinked: true,
-      telebirrBalance: Math.max(current.telebirrBalance, 250),
-    };
-
-    StorageService.saveProfile(updated);
+  async loginWithTeleBirr(phoneNumber?: string, token?: string): Promise<AuthResponse> {
+    const profile = await apiService.loginWithTelebirr(phoneNumber, token);
+    if (profile) {
+      StorageService.saveProfile(profile);
+      return {
+        success: true,
+        message: 'Connected with TeleBirr SuperApp successfully.',
+        profile,
+      };
+    }
 
     return {
-      success: true,
-      message: 'Connected with TeleBirr SuperApp successfully.',
-      profile: updated,
+      success: false,
+      message: 'Failed to authenticate via TeleBirr SuperApp.',
     };
   },
 
@@ -110,6 +78,7 @@ export const AuthService = {
    * Sign out and clear authenticated session
    */
   signOut(): UserProfile {
+    apiService.clearToken();
     return StorageService.clearSession();
   }
 };

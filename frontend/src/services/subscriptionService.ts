@@ -86,6 +86,8 @@ export const SUBSCRIPTION_PLANS: PlanDetails[] = [
   },
 ];
 
+import { apiService } from './apiService';
+
 export const SubscriptionService = {
   getPlans(): PlanDetails[] {
     return SUBSCRIPTION_PLANS;
@@ -95,33 +97,32 @@ export const SubscriptionService = {
     return `sms:${smsRecipient}?body=${encodeURIComponent(smsBody)}`;
   },
 
-  async subscribe(plan: SubscriptionPlan): Promise<{ success: boolean; message: string; profile?: UserProfile }> {
-    const current = StorageService.getProfile();
+  async subscribe(plan: SubscriptionPlan): Promise<{ success: boolean; message: string; profile?: UserProfile; checkoutUrl?: string }> {
     const planDetail = SUBSCRIPTION_PLANS.find(p => p.id === plan);
 
-    if (!planDetail) {
+    if (!planDetail || plan === 'free') {
       return { success: false, message: 'Invalid subscription plan chosen.' };
     }
 
-    const durationDays = plan === 'daily' ? 1 : plan === 'weekly' ? 7 : 30;
-    const expiresAt = Date.now() + durationDays * 24 * 60 * 60 * 1000;
-
-    const updated: UserProfile = {
-      ...current,
-      subscription: {
-        plan,
-        isActive: true,
-        expiresAt,
-        autoRenew: true,
-      },
-    };
-
-    StorageService.saveProfile(updated);
+    // Call backend Telebirr VIP Pass activation / payment order
+    const res = await apiService.activateSubscription(plan);
+    if (res && res.success) {
+      // Reload authoritative profile from PostgreSQL
+      const profile = await apiService.getProfile();
+      if (profile) {
+        StorageService.saveProfile(profile);
+      }
+      return {
+        success: true,
+        message: res.message || `VIP Pass activated successfully.`,
+        profile: profile || undefined,
+        checkoutUrl: res.checkoutUrl,
+      };
+    }
 
     return {
-      success: true,
-      message: `Subscription prompt initiated for ${planDetail.title}. Send '${planDetail.smsBody}' to ${planDetail.smsRecipient} to confirm activation via Airtime.`,
-      profile: updated,
+      success: false,
+      message: res?.message || 'Subscription activation failed via payment gateway.',
     };
   },
 

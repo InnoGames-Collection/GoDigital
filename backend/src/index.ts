@@ -10,6 +10,7 @@ import { paymentRoutes } from './routes/payment.routes.js';
 import { gameRoutes } from './routes/game.routes.js';
 import { tournamentRoutes } from './routes/tournament.routes.js';
 import { adminRoutes } from './routes/admin.routes.js';
+import { notificationRoutes } from './routes/notification.routes.js';
 
 const fastify = Fastify({
   logger: { level: env.NODE_ENV === 'production' ? 'info' : 'debug' },
@@ -17,9 +18,37 @@ const fastify = Fastify({
 });
 
 async function main() {
-  await fastify.register(helmet, { contentSecurityPolicy: false });
+  await fastify.register(helmet, {
+    contentSecurityPolicy: false,
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
+  });
+
+  const allowedHostnames = [
+    'godigital.innopulseplatform.com',
+    'godigital-api.innopulseplatform.com',
+    'godigital-admin.innopulseplatform.com',
+    'admin.godigital.innopulseplatform.com',
+    'api.godigital.innopulseplatform.com',
+    'localhost',
+    '127.0.0.1',
+  ];
+
   await fastify.register(cors, {
-    origin: true,
+    origin: (origin, cb) => {
+      if (!origin) return cb(null, true);
+      try {
+        const { hostname } = new URL(origin);
+        if (
+          allowedHostnames.includes(hostname) ||
+          hostname.endsWith('.innopulseplatform.com') ||
+          hostname.endsWith('.telebirr.et') ||
+          hostname === 'telebirr.et'
+        ) {
+          return cb(null, true);
+        }
+      } catch {}
+      return cb(new Error('Origin Not Allowed By CORS Policy'), false);
+    },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   });
@@ -33,18 +62,25 @@ async function main() {
   // Routes (support both /api/* and /api/v1/*)
   await fastify.register(authRoutes, { prefix: '/api/auth' });
   await fastify.register(authRoutes, { prefix: '/api/v1/auth' });
+  await fastify.register(authRoutes, { prefix: '/api' });
+  await fastify.register(authRoutes, { prefix: '/api/v1' });
 
   await fastify.register(paymentRoutes, { prefix: '/api/payments' });
   await fastify.register(paymentRoutes, { prefix: '/api/v1/payments' });
 
   await fastify.register(gameRoutes, { prefix: '/api/game' });
   await fastify.register(gameRoutes, { prefix: '/api/v1/game' });
+  await fastify.register(gameRoutes, { prefix: '/api' });
+  await fastify.register(gameRoutes, { prefix: '/api/v1' });
 
   await fastify.register(tournamentRoutes, { prefix: '/api/tournaments' });
   await fastify.register(tournamentRoutes, { prefix: '/api/v1/tournaments' });
 
   await fastify.register(adminRoutes, { prefix: '/api' });
   await fastify.register(adminRoutes, { prefix: '/api/v1' });
+
+  await fastify.register(notificationRoutes, { prefix: '/api/notifications' });
+  await fastify.register(notificationRoutes, { prefix: '/api/v1/notifications' });
 
   try {
     const address = await fastify.listen({ port: env.PORT, host: env.HOST });
