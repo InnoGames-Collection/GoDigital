@@ -10,14 +10,8 @@ import * as THREE from 'three';
 import {
   Play,
   RotateCcw,
-  Volume2,
-  VolumeX,
   Trophy,
-  Fuel,
-  Coins,
   Pause,
-  Award,
-  Sparkles,
   AlertTriangle,
   ArrowLeft,
   Clock,
@@ -198,6 +192,7 @@ export const HillRiderGame: React.FC<HillRiderGameProps> = ({
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
   const vehicleRigRef = useRef<VehicleMeshRig | null>(null);
   const animationFrameIdRef = useRef<number | null>(null);
+  const countdownIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const lastTimeRef = useRef<number>(performance.now());
   const dirLightRef = useRef<THREE.DirectionalLight | null>(null);
 
@@ -229,6 +224,13 @@ export const HillRiderGame: React.FC<HillRiderGameProps> = ({
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (document.hidden) {
+        if (countdownIntervalRef.current) {
+          clearInterval(countdownIntervalRef.current);
+          countdownIntervalRef.current = null;
+        }
+        controlsRef.current = { gas: false, brake: false };
+        setIsGasActive(false);
+        setIsBrakeActive(false);
         HillRiderAudio.stopEngine();
         HillRiderAudio.stopAll();
         setStatus((prev) => (prev === 'playing' ? 'paused' : prev));
@@ -238,6 +240,13 @@ export const HillRiderGame: React.FC<HillRiderGameProps> = ({
     };
 
     const handleWindowBlur = () => {
+      if (countdownIntervalRef.current) {
+        clearInterval(countdownIntervalRef.current);
+        countdownIntervalRef.current = null;
+      }
+      controlsRef.current = { gas: false, brake: false };
+      setIsGasActive(false);
+      setIsBrakeActive(false);
       HillRiderAudio.stopEngine();
       HillRiderAudio.stopAll();
       setStatus((prev) => (prev === 'playing' ? 'paused' : prev));
@@ -252,6 +261,10 @@ export const HillRiderGame: React.FC<HillRiderGameProps> = ({
     window.addEventListener('focus', handleWindowFocus);
 
     return () => {
+      if (countdownIntervalRef.current) {
+        clearInterval(countdownIntervalRef.current);
+        countdownIntervalRef.current = null;
+      }
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       window.removeEventListener('blur', handleWindowBlur);
       window.removeEventListener('focus', handleWindowFocus);
@@ -438,6 +451,10 @@ export const HillRiderGame: React.FC<HillRiderGameProps> = ({
   // -------------------------------------------------------------
   const handleStartLevel = useCallback((levelNum: number) => {
     initAudio();
+    if (countdownIntervalRef.current) {
+      clearInterval(countdownIntervalRef.current);
+      countdownIntervalRef.current = null;
+    }
     const config = getLevelConfig(levelNum);
     currentLevelConfigRef.current = config;
     setCurrentLevelNumber(levelNum);
@@ -458,14 +475,16 @@ export const HillRiderGame: React.FC<HillRiderGameProps> = ({
         HillRiderAudio.playCountdownTick(true);
       } else {
         clearInterval(interval);
+        countdownIntervalRef.current = null;
         setStatus('playing');
-        if (soundSettings.engineSound) {
+        if (soundSettings.engineSound && soundEnabled) {
           HillRiderAudio.startEngine();
         }
         lastTimeRef.current = performance.now();
       }
     }, 700);
-  }, [initAudio, resetRun, soundSettings.engineSound]);
+    countdownIntervalRef.current = interval;
+  }, [initAudio, resetRun, soundSettings.engineSound, soundEnabled]);
 
   const handleRestartRun = useCallback(() => {
     HillRiderAudio.stopEngine();
@@ -926,111 +945,64 @@ export const HillRiderGame: React.FC<HillRiderGameProps> = ({
     >
       {/* ========================================================================= */}
       {/* 1. TOP HEADER BAR: Strictly 4 functional items: Back, Level, Score, Time  */}
+      {/* Rendered only during active gameplay states (playing, paused, countdown)   */}
       {/* ========================================================================= */}
-      <div className="relative z-30 flex items-center justify-between px-3 sm:px-5 py-2.5 bg-slate-900/95 backdrop-blur-md border-b border-slate-800 shadow-lg">
-        {/* Item 1: Back Button (Top-left corner, clearly visible and easy to tap) */}
-        <button
-          onClick={() => {
-            HillRiderAudio.stopEngine();
-            HillRiderAudio.stopAll();
-            setStatus('level_select');
-          }}
-          className="px-3 py-1.5 rounded-xl bg-slate-800/90 hover:bg-slate-700 text-slate-200 hover:text-white flex items-center gap-1.5 text-xs sm:text-sm font-bold transition-all cursor-pointer border border-slate-700/80 shadow"
-          title="Back to Levels"
-          aria-label="Back"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          <span>BACK</span>
-        </button>
+      {(status === 'playing' || status === 'paused' || status === 'countdown') && (
+        <div className="relative z-30 flex items-center justify-between px-3 sm:px-5 py-2 bg-slate-900/95 backdrop-blur-md border-b border-slate-800 shadow-lg">
+          {/* Item 1: Back Button (Top-left corner, clearly visible and easy to tap) */}
+          <button
+            onClick={() => {
+              if (countdownIntervalRef.current) {
+                clearInterval(countdownIntervalRef.current);
+                countdownIntervalRef.current = null;
+              }
+              controlsRef.current = { gas: false, brake: false };
+              setIsGasActive(false);
+              setIsBrakeActive(false);
+              HillRiderAudio.stopEngine();
+              HillRiderAudio.stopAll();
+              setStatus('level_select');
+            }}
+            className="px-3 py-1.5 rounded-xl bg-slate-800/90 hover:bg-slate-700 active:scale-95 text-slate-200 hover:text-white flex items-center gap-1.5 text-xs sm:text-sm font-bold transition-all cursor-pointer border border-slate-700/80 shadow"
+            title="Back to Levels"
+            aria-label="Back"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            <span>BACK</span>
+          </button>
 
-        {/* Item 2: Level (Clean numeric display) */}
-        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800/90 border border-slate-700/80 shadow">
-          <span className="text-[10px] text-slate-400 uppercase font-black tracking-wider">LEVEL</span>
-          <span className="text-white font-mono font-black text-sm sm:text-base">{currentLevelNumber}</span>
-        </div>
-
-        {/* Item 3: Score (Points scored so far) */}
-        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800/90 border border-slate-700/80 shadow">
-          <Trophy className="w-4 h-4 text-amber-400" />
-          <div className="flex items-center gap-1 leading-none">
-            <span className="text-[10px] text-slate-400 uppercase font-black tracking-wider">SCORE</span>
-            <span className="text-[#8BCB3D] font-mono font-black text-sm sm:text-base">{normalizedScore}</span>
+          {/* Item 2: Level (Clean numeric display) */}
+          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800/90 border border-slate-700/80 shadow">
+            <span className="text-[10px] text-slate-400 uppercase font-black tracking-wider">LEVEL</span>
+            <span className="text-white font-mono font-black text-xs sm:text-sm">
+              {String(currentLevelNumber).padStart(2, '0')}
+            </span>
           </div>
-        </div>
 
-        {/* Item 4: Time (Remaining countdown time) */}
-        <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800/90 border shadow ${
-          timeLeft <= 15 ? 'border-rose-500/80 text-rose-400 animate-pulse' : 'border-slate-700/80 text-cyan-400'
-        }`}>
-          <Clock className="w-4 h-4" />
-          <div className="flex items-center gap-1 leading-none">
-            <span className="text-[10px] text-slate-400 uppercase font-black tracking-wider">TIME</span>
-            <span className="font-mono font-black text-sm sm:text-base">{formatTime(timeLeft)}</span>
-          </div>
-        </div>
-      </div>
-
-      {/* ========================================================================= */}
-      {/* 2. SECONDARY LIVE HUD: Distance / Target Progress, Coins, Fuel, Speed     */}
-      {/* ========================================================================= */}
-      {status === 'playing' && (
-        <div className="absolute top-14 inset-x-3 sm:inset-x-5 z-20 flex items-center justify-between pointer-events-none">
-          
-          {/* Distance & Coins Pill */}
-          <div className="flex items-center gap-2">
-            <div className="px-3 py-1.5 rounded-xl bg-slate-950/85 backdrop-blur-sm border border-slate-800 text-white font-mono text-xs flex flex-col gap-1 shadow-lg min-w-[130px]">
-              <div className="flex items-center justify-between gap-2">
-                <span className="text-[9px] text-slate-400 uppercase font-sans font-bold">DIST</span>
-                <span className="text-[#8BCB3D] font-black">
-                  {distanceMeters}m <span className="text-[10px] text-slate-400 font-normal">/ {currentLevelConfigRef.current.targetDistance}m</span>
-                </span>
-              </div>
-              {/* Progress track */}
-              <div className="w-full h-1.5 rounded-full bg-slate-800 overflow-hidden">
-                <div
-                  className="h-full bg-gradient-to-r from-[#1688C9] to-[#8BCB3D] transition-all duration-150"
-                  style={{
-                    width: `${Math.min(100, Math.round((distanceMeters / currentLevelConfigRef.current.targetDistance) * 100))}%`,
-                  }}
-                />
-              </div>
-            </div>
-
-            <div className="px-3 py-1.5 rounded-xl bg-slate-950/85 backdrop-blur-sm border border-slate-800 text-amber-400 font-mono text-xs flex items-center gap-1.5 shadow-lg">
-              <Coins className="w-3.5 h-3.5 fill-amber-400" />
-              <span className="font-black text-white">{coinsCount}</span>
+          {/* Item 3: Score (Points scored so far) */}
+          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800/90 border border-slate-700/80 shadow">
+            <Trophy className="w-4 h-4 text-amber-400" />
+            <div className="flex items-center gap-1 leading-none">
+              <span className="text-[10px] text-slate-400 uppercase font-black tracking-wider">SCORE</span>
+              <span className="text-[#8BCB3D] font-mono font-black text-xs sm:text-sm">{normalizedScore}</span>
             </div>
           </div>
 
-          {/* Fuel Gauge & Speedometer */}
-          <div className="flex items-center gap-2">
-            {/* Speedometer */}
-            <div className="px-2.5 py-1.5 rounded-xl bg-slate-950/85 backdrop-blur-sm border border-slate-800 text-cyan-300 font-mono text-xs font-black shadow-lg">
-              {currentSpeedKmh} <span className="text-[9px] font-sans font-semibold text-slate-400">KM/H</span>
-            </div>
-
-            {/* Fuel Bar */}
-            <div className="w-24 sm:w-32 bg-slate-950/85 backdrop-blur-sm border border-slate-800 rounded-xl p-1.5 flex items-center gap-1.5 shadow-lg">
-              <Fuel className={`w-3.5 h-3.5 shrink-0 ${fuelPercent <= 20 ? 'text-rose-500 animate-pulse' : 'text-[#8BCB3D]'}`} />
-              <div className="flex-1 h-2 rounded-full bg-slate-800 overflow-hidden">
-                <div
-                  className={`h-full transition-all duration-150 ${
-                    fuelPercent > 45
-                      ? 'bg-[#8BCB3D]'
-                      : fuelPercent > 20
-                      ? 'bg-amber-400'
-                      : 'bg-rose-500 animate-pulse'
-                  }`}
-                  style={{ width: `${fuelPercent}%` }}
-                />
-              </div>
+          {/* Item 4: Time (Remaining countdown time) */}
+          <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800/90 border shadow ${
+            timeLeft <= 15 ? 'border-rose-500/80 text-rose-400 animate-pulse' : 'border-slate-700/80 text-cyan-400'
+          }`}>
+            <Clock className="w-4 h-4" />
+            <div className="flex items-center gap-1 leading-none">
+              <span className="text-[10px] text-slate-400 uppercase font-black tracking-wider">TIME</span>
+              <span className="font-mono font-black text-sm sm:text-base">{formatTime(timeLeft)}</span>
             </div>
           </div>
         </div>
       )}
 
       {/* ========================================================================= */}
-      {/* 3. 3D WEBGL VIEWPORT CONTAINER                                            */}
+      {/* 2. 3D WEBGL VIEWPORT CONTAINER                                            */}
       {/* ========================================================================= */}
       <div className="relative w-full flex-1 min-h-[440px] bg-slate-950 overflow-hidden">
         
@@ -1039,17 +1011,9 @@ export const HillRiderGame: React.FC<HillRiderGameProps> = ({
 
         {/* OVERTURN WARNING */}
         {isOverturned && status === 'playing' && (
-          <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20 px-4 py-2 rounded-2xl bg-rose-600/90 text-white font-black text-xs uppercase tracking-wider flex items-center gap-2 shadow-2xl border-2 border-white animate-bounce pointer-events-none">
+          <div className="absolute top-6 left-1/2 -translate-x-1/2 z-20 px-4 py-2 rounded-2xl bg-rose-600/90 text-white font-black text-xs uppercase tracking-wider flex items-center gap-2 shadow-2xl border-2 border-white animate-bounce pointer-events-none">
             <AlertTriangle className="w-4 h-4 fill-current" />
             <span>WARNING: VEHICLE OVERTURNED!</span>
-          </div>
-        )}
-
-        {/* LOW FUEL WARNING */}
-        {fuelPercent <= 15 && fuelPercent > 0 && status === 'playing' && (
-          <div className="absolute top-14 left-1/2 -translate-x-1/2 z-20 px-3 py-1 rounded-xl bg-amber-500/90 text-slate-950 font-black text-[11px] uppercase tracking-wider flex items-center gap-1.5 shadow-lg animate-pulse pointer-events-none">
-            <Fuel className="w-3.5 h-3.5 fill-current" />
-            <span>LOW FUEL! GRAB A JERRYCAN</span>
           </div>
         )}
 
@@ -1273,7 +1237,7 @@ export const HillRiderGame: React.FC<HillRiderGameProps> = ({
             <button
               onClick={() => {
                 setStatus('playing');
-                if (soundSettings.engineSound) {
+                if (soundSettings.engineSound && soundEnabled) {
                   HillRiderAudio.startEngine();
                 }
                 lastTimeRef.current = performance.now();
@@ -1293,7 +1257,18 @@ export const HillRiderGame: React.FC<HillRiderGameProps> = ({
             </button>
 
             <button
-              onClick={() => setStatus('level_select')}
+              onClick={() => {
+                if (countdownIntervalRef.current) {
+                  clearInterval(countdownIntervalRef.current);
+                  countdownIntervalRef.current = null;
+                }
+                controlsRef.current = { gas: false, brake: false };
+                setIsGasActive(false);
+                setIsBrakeActive(false);
+                HillRiderAudio.stopEngine();
+                HillRiderAudio.stopAll();
+                setStatus('level_select');
+              }}
               className="w-full py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white font-bold text-xs flex items-center justify-center gap-2 transition-colors cursor-pointer"
             >
               <Layers className="w-3.5 h-3.5" />
@@ -1301,7 +1276,18 @@ export const HillRiderGame: React.FC<HillRiderGameProps> = ({
             </button>
 
             <button
-              onClick={() => setStatus('menu')}
+              onClick={() => {
+                if (countdownIntervalRef.current) {
+                  clearInterval(countdownIntervalRef.current);
+                  countdownIntervalRef.current = null;
+                }
+                controlsRef.current = { gas: false, brake: false };
+                setIsGasActive(false);
+                setIsBrakeActive(false);
+                HillRiderAudio.stopEngine();
+                HillRiderAudio.stopAll();
+                setStatus('menu');
+              }}
               className="w-full py-2 text-xs text-slate-400 hover:text-white font-semibold transition-colors cursor-pointer"
             >
               Main Menu
@@ -1328,12 +1314,22 @@ export const HillRiderGame: React.FC<HillRiderGameProps> = ({
             if (nextLevel <= 40) {
               handleStartLevel(nextLevel);
             } else {
+              HillRiderAudio.stopEngine();
+              HillRiderAudio.stopAll();
               setStatus('level_select');
             }
           }}
           onReplay={() => handleStartLevel(currentLevelNumber)}
-          onOpenLevels={() => setStatus('level_select')}
-          onOpenMenu={() => setStatus('menu')}
+          onOpenLevels={() => {
+            HillRiderAudio.stopEngine();
+            HillRiderAudio.stopAll();
+            setStatus('level_select');
+          }}
+          onOpenMenu={() => {
+            HillRiderAudio.stopEngine();
+            HillRiderAudio.stopAll();
+            setStatus('menu');
+          }}
         />
       )}
 
@@ -1348,8 +1344,16 @@ export const HillRiderGame: React.FC<HillRiderGameProps> = ({
           score={lastRunStats.score}
           bestScore={progress.completedLevels[currentLevelNumber]?.bestScore || 0}
           onRetry={() => handleStartLevel(currentLevelNumber)}
-          onOpenLevels={() => setStatus('level_select')}
-          onOpenMenu={() => setStatus('menu')}
+          onOpenLevels={() => {
+            HillRiderAudio.stopEngine();
+            HillRiderAudio.stopAll();
+            setStatus('level_select');
+          }}
+          onOpenMenu={() => {
+            HillRiderAudio.stopEngine();
+            HillRiderAudio.stopAll();
+            setStatus('menu');
+          }}
         />
       )}
     </div>
