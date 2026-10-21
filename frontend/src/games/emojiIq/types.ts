@@ -10,9 +10,7 @@ export type EmojiIqScreen =
   | 'PLAYING'
   | 'FEEDBACK'
   | 'LEVEL_COMPLETE'
-  | 'GAME_OVER'
   | 'LEADERBOARD'
-  | 'STORE'
   | 'SETTINGS'
   | 'HOW_TO_PLAY';
 
@@ -80,7 +78,6 @@ export interface EmojiIqLevelConfig {
   targetScore: number;
   questionCount: number; // 10 to 12
   theme: string;
-  rewardCoins?: number;
 }
 
 export interface TournamentScoreCalculation {
@@ -119,9 +116,7 @@ export interface EmojiIqPlayerStats {
   perfectCount: number;
   bestCombo: number;
   hintsUsed: number;
-  coins?: number;
   availableHints: number;
-  lives?: number;
   starsByLevel: Record<number, number>;
   highScoreByLevel: Record<number, number>;
 }

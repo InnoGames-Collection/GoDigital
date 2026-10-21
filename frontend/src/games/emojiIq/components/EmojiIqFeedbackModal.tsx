@@ -30,10 +30,6 @@ interface EmojiIqFeedbackModalProps {
   onAdvance: () => void;
   onOpenLeaderboard: () => void;
   onGoHome: () => void;
-  coinsWon?: number;
-  remainingLives?: number;
-  onUseCoinsForLives?: () => void;
-  playerCoins?: number;
 }
 
 export const EmojiIqFeedbackModal: React.FC<EmojiIqFeedbackModalProps> = ({

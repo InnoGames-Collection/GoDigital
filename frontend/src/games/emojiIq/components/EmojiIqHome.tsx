@@ -6,7 +6,7 @@
 import React from 'react';
 import { EmojiIqPlayerStats } from '../types';
 import { EMOJI_IQ_COLORS } from '../colors';
-import { Play, Grid, Trophy, ShoppingBag, HelpCircle, Star, Flame, Brain } from 'lucide-react';
+import { Play, Grid, Trophy, HelpCircle, Star, Flame, Brain } from 'lucide-react';
 import { emojiIqAudio } from '../emojiIqAudio';
 
 interface EmojiIqHomeProps {
@@ -15,7 +15,6 @@ interface EmojiIqHomeProps {
   onOpenLevelSelect: () => void;
   onOpenLeaderboard: () => void;
   onOpenHowToPlay: () => void;
-  onOpenStore?: () => void;
 }
 
 export const EmojiIqHome: React.FC<EmojiIqHomeProps> = ({

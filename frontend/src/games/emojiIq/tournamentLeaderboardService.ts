@@ -132,7 +132,6 @@ export class EmojiIqLeaderboardService {
     levelScore: number,
     accuracy: number,
     levelBestCombo: number,
-    _rewardCoins: number = 0,
     perfectAnswers: number = 0
   ): EmojiIqPlayerStats {
     const stats = this.loadPlayerStats();
@@ -178,33 +177,6 @@ export class EmojiIqLeaderboardService {
     if (stats.availableHints <= 0) return false;
     stats.availableHints -= 1;
     stats.hintsUsed += 1;
-    this.savePlayerStats(stats);
-    return true;
-  }
-
-  public static buyHints(count: number, cost: number): boolean {
-    const stats = this.loadPlayerStats();
-    if (stats.coins < cost) return false;
-    stats.coins -= cost;
-    stats.availableHints += count;
-    this.savePlayerStats(stats);
-    return true;
-  }
-
-  public static buyLives(count: number, cost: number): boolean {
-    const stats = this.loadPlayerStats();
-    if (stats.coins < cost) return false;
-    stats.coins -= cost;
-    stats.lives = Math.min(3, stats.lives + count);
-    this.savePlayerStats(stats);
-    return true;
-  }
-
-  public static restoreLivesForCoins(cost: number = 30): boolean {
-    const stats = this.loadPlayerStats();
-    if (stats.coins < cost) return false;
-    stats.coins -= cost;
-    stats.lives = 3;
     this.savePlayerStats(stats);
     return true;
   }

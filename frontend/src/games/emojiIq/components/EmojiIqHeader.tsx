@@ -16,10 +16,6 @@ interface EmojiIqHeaderProps {
   onUseHint?: () => void;
   showHintButton?: boolean;
   hintsDisabled?: boolean;
-  coins?: number;
-  lives?: number;
-  maxLives?: number;
-  onOpenStore?: () => void;
 }
 
 export const EmojiIqHeader: React.FC<EmojiIqHeaderProps> = ({

@@ -190,7 +190,6 @@ export const EmojiIqGame: React.FC<EmojiIqGameProps> = ({ onClose, onGameComplet
         levelScore,
         finalAccuracy,
         levelBestCombo,
-        0,
         levelPerfectCount
       );
       refreshStats();
