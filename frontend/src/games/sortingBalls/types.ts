@@ -34,6 +34,7 @@ export interface SortingLevelConfig {
 
 export type GameState =
   | 'MENU'
+  | 'INITIALIZING'
   | 'PLAYING'
   | 'PAUSED'
   | 'LEVEL_COMPLETE'
@@ -43,7 +44,8 @@ export type GameState =
   | 'ACHIEVEMENTS'
   | 'STATISTICS'
   | 'SETTINGS'
-  | 'ABOUT';
+  | 'ABOUT'
+  | 'ERROR';
 
 export interface MoveRecord {
   fromIndex: number;

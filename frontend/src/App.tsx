@@ -131,6 +131,19 @@ export default function App() {
     };
   }, [profile?.phoneNumber]);
 
+  // Handle direct launch via URL parameter (e.g. ?game=sorting-balls)
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    const targetGameId = params.get('game');
+    if (targetGameId) {
+      const g = GameRegistry.getGameById(targetGameId);
+      if (g) {
+        launchGame(g);
+      }
+    }
+  }, [launchGame]);
+
   // Handle browser / platform back button across modals, content view, and menu drawer
   useEffect(() => {
     const handlePopState = () => {

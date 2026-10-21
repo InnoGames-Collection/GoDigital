@@ -147,6 +147,12 @@ export const SortingBallsGame: React.FC<SortingBallsGameProps> = ({
   const [hintsUsedCount, setHintsUsedCount] = useState<number>(0);
   const [activeHintMessage, setActiveHintMessage] = useState<string | null>(null);
 
+  // Authoritative guard refs for atomic single-use and idempotent initialization
+  const extraTubeUsedRef = useRef<boolean>(false);
+  const isLevelCompletedRef = useRef<boolean>(false);
+  const isInitializingRef = useRef<boolean>(false);
+  const levelSelectSourceRef = useRef<'MENU' | 'PLAYING'>('MENU');
+
   // Active Gameplay Timer (seconds)
   const [elapsedSeconds, setElapsedSeconds] = useState<number>(0);
   const levelTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -177,7 +183,7 @@ export const SortingBallsGame: React.FC<SortingBallsGameProps> = ({
     sortingAudio.isAudioEnabled = soundActive;
   }, [soundActive]);
 
-  // Active level timer ticker
+  // Active level timer ticker (strictly active during PLAYING only)
   useEffect(() => {
     if (gameState === 'PLAYING') {
       levelTimerRef.current = setInterval(() => {
@@ -202,47 +208,83 @@ export const SortingBallsGame: React.FC<SortingBallsGameProps> = ({
     SORTING_LEVELS.find((lvl) => lvl.level === currentLevelNumber) || SORTING_LEVELS[0];
 
   /**
-   * Initialize and prepare a level
+   * Authoritative, idempotent game starter:
+   * Initializes the selected level, resets all counters, loads 3D tubes/balls,
+   * resizes the viewport, and transitions into PLAYING cleanly.
    */
-  const loadLevel = useCallback((lvlNumber: number) => {
-    const config = SORTING_LEVELS.find((l) => l.level === lvlNumber) || SORTING_LEVELS[0];
-    setCurrentLevelNumber(config.level);
-    const cloned = config.tubes.map((t) => [...t]);
-    setCurrentTubes(cloned);
-    setSelectedTubeIndex(null);
-    setSelectedGroupCount(1);
-    setMoveHistory([]);
-    setMovesCount(0);
-    setExtraTubesAdded(0);
-    setUndosRemaining(5);
-    setUndosUsedCount(0);
-    setHintsUsedCount(0);
-    setActiveHintMessage(null);
-    setElapsedSeconds(0);
-    setCurrentScore(0);
-    setIsAnimating(false);
-    setLastScoreGain(null);
+  const startGame = useCallback((lvlNumber: number) => {
+    if (isInitializingRef.current) return;
+    isInitializingRef.current = true;
+    sortingAudio.playButton();
 
-    if (renderer3DRef.current) {
-      renderer3DRef.current.setLevelState(cloned, null, 1);
+    try {
+      const config = SORTING_LEVELS.find((l) => l.level === lvlNumber) || SORTING_LEVELS[0];
+      if (!config || !config.tubes || config.tubes.length === 0) {
+        setGameState('ERROR');
+        isInitializingRef.current = false;
+        return;
+      }
+
+      const freshTubes = config.tubes.map((t) => [...t]);
+
+      // Atomic state reset
+      setCurrentLevelNumber(config.level);
+      setCurrentTubes(freshTubes);
+      setSelectedTubeIndex(null);
+      setSelectedGroupCount(1);
+      setMoveHistory([]);
+      setMovesCount(0);
+      setExtraTubesAdded(0);
+      extraTubeUsedRef.current = false;
+      isLevelCompletedRef.current = false;
+      setUndosRemaining(5);
+      setUndosUsedCount(0);
+      setHintsUsedCount(0);
+      setActiveHintMessage(null);
+      setElapsedSeconds(0);
+      setCurrentScore(0);
+      setIsAnimating(false);
+      setLastScoreGain(null);
+
+      // Render board immediately in Three.js WebGL scene
+      if (renderer3DRef.current) {
+        renderer3DRef.current.setLevelState(freshTubes, null, 1);
+        renderer3DRef.current.resize();
+      }
+
+      // Enter PLAYING state
+      setGameState('PLAYING');
+
+      // Double-rAF ensures DOM layout of header has settled and renderer matches final pixel dimensions
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          if (renderer3DRef.current) {
+            renderer3DRef.current.resize();
+          }
+          isInitializingRef.current = false;
+        });
+      });
+    } catch (err) {
+      console.error('Failed to initialize level:', err);
+      setGameState('ERROR');
+      isInitializingRef.current = false;
     }
   }, []);
 
-  // Mount load initial tubes
-  useEffect(() => {
-    loadLevel(progress.unlockedLevel || 1);
-  }, [loadLevel, progress.unlockedLevel]);
-
-  // Mount WebGL renderer
+  // Mount WebGL renderer and immediately pre-render the initial level
   useEffect(() => {
     if (!canvasContainerRef.current) return;
 
     const renderer = new SortingRenderer3D(canvasContainerRef.current);
     renderer3DRef.current = renderer;
 
-    if (currentTubes.length > 0) {
-      renderer.setLevelState(currentTubes, selectedTubeIndex, selectedGroupCount);
-    }
+    // Immediately pre-populate the 3D scene with current level tubes so the board is ready before Play
+    const lvl = currentLevelNumber || progress.unlockedLevel || 1;
+    const config = SORTING_LEVELS.find((l) => l.level === lvl) || SORTING_LEVELS[0];
+    const initialTubes = config.tubes.map((t) => [...t]);
+    setCurrentTubes(initialTubes);
+    renderer.setLevelState(initialTubes, null, 1);
+    renderer.resize();
 
     return () => {
       renderer.dispose();
@@ -261,35 +303,28 @@ export const SortingBallsGame: React.FC<SortingBallsGameProps> = ({
     }
   };
 
-  // Synchronize board initialization when entering PLAYING mode
-  useEffect(() => {
-    if (gameState === 'PLAYING') {
-      const lvl = currentLevelNumber || progress.unlockedLevel || 1;
-      const config = SORTING_LEVELS.find((l) => l.level === lvl) || SORTING_LEVELS[0];
-      const cloned = config.tubes.map((t) => [...t]);
-      if (currentTubes.length === 0) {
-        setCurrentTubes(cloned);
-      }
-      requestAnimationFrame(() => {
-        if (renderer3DRef.current) {
-          renderer3DRef.current.resize();
-          renderer3DRef.current.setLevelState(
-            currentTubes.length > 0 ? currentTubes : cloned,
-            null,
-            1
-          );
-        }
-      });
-    }
-  }, [gameState]);
-
   /**
    * Add 1 Extra Empty Tube (Strictly maximum 1 per active level attempt)
    * Penalty: -250 PTS
    */
   const handleAddExtraTube = () => {
-    if (extraTubesAdded >= 1 || gameState !== 'PLAYING' || isAnimating) return;
+    if (
+      extraTubeUsedRef.current ||
+      extraTubesAdded >= 1 ||
+      gameState !== 'PLAYING' ||
+      isAnimating ||
+      isLevelCompletedRef.current
+    ) {
+      if (extraTubeUsedRef.current || extraTubesAdded >= 1) {
+        setLastScoreGain({ amount: 0, label: 'EXTRA TUBE ALREADY USED (MAX 1)' });
+        setTimeout(() => setLastScoreGain(null), 1800);
+      }
+      return;
+    }
+    // Commit atomically before any async dispatch
+    extraTubeUsedRef.current = true;
     sortingAudio.playButton();
+
     const updated = [...currentTubes, []];
     setCurrentTubes(updated);
     setExtraTubesAdded(1);
@@ -308,6 +343,7 @@ export const SortingBallsGame: React.FC<SortingBallsGameProps> = ({
 
     if (renderer3DRef.current) {
       renderer3DRef.current.setLevelState(updated, selectedTubeIndex, selectedGroupCount);
+      renderer3DRef.current.resize();
     }
   };
 
@@ -650,14 +686,15 @@ export const SortingBallsGame: React.FC<SortingBallsGameProps> = ({
    * Reset current level
    */
   const handleReset = () => {
-    sortingAudio.playButton();
-    loadLevel(currentLevelNumber);
+    startGame(currentLevelNumber);
   };
 
   /**
    * Handle Comprehensive Level Complete & Scoring
    */
   const handleLevelComplete = (finalTubes: BallColorKey[][]) => {
+    if (isLevelCompletedRef.current) return;
+    isLevelCompletedRef.current = true;
     setGameState('LEVEL_COMPLETE');
     sortingAudio.playLevelWin();
 
@@ -794,7 +831,7 @@ export const SortingBallsGame: React.FC<SortingBallsGameProps> = ({
       highScore: 0,
     };
     saveProgress(blank);
-    loadLevel(1);
+    startGame(1);
     setGameState('MENU');
   };
 
@@ -829,90 +866,93 @@ export const SortingBallsGame: React.FC<SortingBallsGameProps> = ({
          =================================================================== */}
       {gameState === 'PLAYING' && (
         <header
-          className="w-full h-14 sm:h-16 flex items-center justify-between px-3 sm:px-6 border-b border-[#D4C3AA] z-30 shrink-0 shadow-xs"
+          className="w-full h-13 sm:h-16 flex items-center justify-between px-1.5 sm:px-4 border-b border-[#D4C3AA] z-30 shrink-0 shadow-xs flex-nowrap"
           style={{ backgroundColor: '#F3E9D8' }}
         >
-          {/* Left: Primary controls (Back, Time, Sound) */}
-          <div className="flex items-center gap-2 sm:gap-3">
+          {/* Left: Primary controls (1. Back, 2. Time, 3. Sound) */}
+          <div className="flex items-center gap-1 sm:gap-2 flex-nowrap shrink-0">
             {/* 1. Back */}
             <button
               onClick={() => {
                 sortingAudio.playButton();
                 setGameState('MENU');
               }}
-              className="px-3 py-1.5 rounded-xl bg-[#E6D8C3] hover:bg-[#d8c8b0] active:scale-95 text-[#40372F] flex items-center gap-1.5 transition-all cursor-pointer border border-[#D4C3AA] shadow-xs text-xs font-bold"
+              className="px-2 py-1 sm:px-2.5 sm:py-1.5 rounded-lg bg-[#E6D8C3] hover:bg-[#d8c8b0] active:scale-95 text-[#40372F] flex items-center gap-1 transition-all cursor-pointer border border-[#D4C3AA] shadow-xs text-xs font-bold"
               title="Return to Menu"
               aria-label="Back to Menu"
             >
-              <ArrowLeft className="w-4 h-4 text-[#40372F]" />
-              <span className="font-bold uppercase tracking-wider">Back</span>
+              <ArrowLeft className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#40372F] shrink-0" />
+              <span className="font-bold uppercase tracking-wider text-[11px] sm:text-xs">Back</span>
             </button>
 
             {/* 2. Time */}
-            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#E6D8C3] border border-[#D4C3AA] text-[#40372F] font-mono text-xs font-bold shadow-xs">
-              <Clock className="w-3.5 h-3.5 text-[#786B5B]" />
+            <div className="flex items-center gap-1 px-1.5 py-1 sm:px-2.5 sm:py-1.5 rounded-lg bg-[#E6D8C3] border border-[#D4C3AA] text-[#40372F] font-mono text-[11px] sm:text-xs font-bold shadow-xs">
+              <Clock className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-[#786B5B] shrink-0" />
               <span>{formatTime(elapsedSeconds)}</span>
             </div>
 
             {/* 3. Sound */}
             <button
               onClick={() => setSoundActive(!soundActive)}
-              className="w-8.5 h-8.5 rounded-xl bg-[#E6D8C3] hover:bg-[#d8c8b0] active:scale-95 text-[#40372F] flex items-center justify-center transition-all cursor-pointer border border-[#D4C3AA] shadow-xs"
+              className="w-7 h-7 sm:w-8.5 sm:h-8.5 rounded-lg bg-[#E6D8C3] hover:bg-[#d8c8b0] active:scale-95 text-[#40372F] flex items-center justify-center transition-all cursor-pointer border border-[#D4C3AA] shadow-xs shrink-0"
               aria-label="Toggle Sound"
               title="Toggle Sound"
             >
               {soundActive ? (
-                <Volume2 className="w-4 h-4 text-[#40372F]" />
+                <Volume2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#40372F]" />
               ) : (
-                <VolumeX className="w-4 h-4 text-[#786B5B]" />
+                <VolumeX className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#786B5B]" />
               )}
             </button>
           </div>
 
-          {/* Right: Gameplay actions (Moves, Undo, Add Tube) */}
-          <div className="flex items-center gap-2 sm:gap-3">
+          {/* Right: Gameplay actions (4. Moves, 5. Undo, 6. Add Tube) */}
+          <div className="flex items-center gap-1 sm:gap-2 flex-nowrap shrink-0">
             {/* 4. Moves */}
-            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#E6D8C3] border border-[#D4C3AA] text-[#40372F] font-mono text-xs font-bold shadow-xs">
-              <span className="text-[#786B5B] text-[10px] font-sans uppercase font-bold">Moves</span>
+            <div className="flex items-center gap-1 px-1.5 py-1 sm:px-2.5 sm:py-1.5 rounded-lg bg-[#E6D8C3] border border-[#D4C3AA] text-[#40372F] font-mono text-[11px] sm:text-xs font-bold shadow-xs">
+              <span className="text-[#786B5B] text-[10px] font-sans uppercase font-bold hidden min-[370px]:inline">Moves</span>
               <span>{movesCount}</span>
             </div>
 
             {/* 5. Undo */}
-            <div className="relative">
-              <button
-                onClick={handleUndo}
-                disabled={moveHistory.length === 0 || undosRemaining <= 0 || isAnimating}
-                className={`px-3 py-1.5 rounded-xl bg-[#E6D8C3] hover:bg-[#d8c8b0] active:scale-95 text-[#40372F] flex items-center gap-1.5 text-xs font-bold transition-all cursor-pointer border border-[#D4C3AA] shadow-xs ${
-                  moveHistory.length === 0 || undosRemaining <= 0 || isAnimating
-                    ? 'opacity-40 cursor-not-allowed'
-                    : ''
-                }`}
-                aria-label="Undo Move"
-                title={`Undo (${undosRemaining} left)`}
-              >
-                <Undo2 className="w-4 h-4 text-[#40372F] stroke-[2.2]" />
-                <span className="hidden sm:inline">Undo</span>
-                <span className="text-[10px] font-mono bg-[#D4C3AA] text-[#40372F] px-1.5 py-0.2 rounded-full font-bold">
-                  {undosRemaining}
-                </span>
-              </button>
-            </div>
+            <button
+              onClick={handleUndo}
+              disabled={moveHistory.length === 0 || undosRemaining <= 0 || isAnimating}
+              className={`px-1.5 py-1 sm:px-2.5 sm:py-1.5 rounded-lg bg-[#E6D8C3] hover:bg-[#d8c8b0] active:scale-95 text-[#40372F] flex items-center gap-1 text-[11px] sm:text-xs font-bold transition-all cursor-pointer border border-[#D4C3AA] shadow-xs ${
+                moveHistory.length === 0 || undosRemaining <= 0 || isAnimating
+                  ? 'opacity-40 cursor-not-allowed'
+                  : ''
+              }`}
+              aria-label="Undo Move"
+              title={`Undo (${undosRemaining} left)`}
+            >
+              <Undo2 className="w-3.5 h-3.5 text-[#40372F] stroke-[2.2] shrink-0" />
+              <span className="text-[10px] font-mono bg-[#D4C3AA] text-[#40372F] px-1 rounded-full font-bold">
+                {undosRemaining}
+              </span>
+            </button>
 
             {/* 6. Add Tube (Strictly maximum 1 per attempt) */}
             <button
               onClick={handleAddExtraTube}
-              disabled={extraTubesAdded >= 1 || isAnimating}
-              className={`px-3 py-1.5 rounded-xl flex items-center gap-1.5 text-xs font-bold transition-all border shadow-xs ${
-                extraTubesAdded >= 1
+              disabled={extraTubesAdded >= 1 || extraTubeUsedRef.current || isAnimating}
+              className={`px-2 py-1 sm:px-2.5 sm:py-1.5 rounded-lg flex items-center gap-1 text-[11px] sm:text-xs font-bold transition-all border shadow-xs ${
+                extraTubesAdded >= 1 || extraTubeUsedRef.current
                   ? 'opacity-40 cursor-not-allowed bg-[#E6D8C3] border-[#D4C3AA] text-[#786B5B]'
                   : 'bg-[#D58A36] hover:bg-[#c47b2c] active:scale-95 text-white border-[#b87024] cursor-pointer'
               }`}
               aria-label="Add Extra Buffer Tube (-250 PTS)"
-              title={extraTubesAdded >= 1 ? 'Extra tube already added (Max 1 per attempt)' : 'Add 1 Tube (-250 PTS)'}
+              title={
+                extraTubesAdded >= 1 || extraTubeUsedRef.current
+                  ? 'Extra tube already used (Max 1 per attempt)'
+                  : 'Add 1 Tube (-250 PTS)'
+              }
             >
-              <Plus className="w-4 h-4 stroke-[2.5]" />
+              <Plus className="w-3.5 h-3.5 stroke-[2.5] shrink-0" />
               <span>Tube</span>
-              {extraTubesAdded >= 1 && <span className="text-[10px] font-mono opacity-80">(1/1)</span>}
+              {(extraTubesAdded >= 1 || extraTubeUsedRef.current) && (
+                <span className="text-[9px] font-mono opacity-80">(1/1)</span>
+              )}
             </button>
           </div>
         </header>
@@ -922,7 +962,7 @@ export const SortingBallsGame: React.FC<SortingBallsGameProps> = ({
           2. PUZZLE ARENA (3D Canvas + In-Game HUD Controls)
          =================================================================== */}
       <main
-        className="relative flex-1 w-full flex flex-col overflow-hidden"
+        className="relative flex-1 w-full min-h-0 flex flex-col overflow-hidden"
         style={{ backgroundColor: '#F3E9D8' }}
       >
         {/* Live Score Gain / Penalty Floating Notification */}
@@ -956,7 +996,7 @@ export const SortingBallsGame: React.FC<SortingBallsGameProps> = ({
         <div
           ref={canvasContainerRef}
           onPointerDown={handleCanvasPointerDown}
-          className="relative flex-1 w-full h-full cursor-pointer touch-none"
+          className="absolute inset-0 w-full h-full cursor-pointer touch-none"
         />
       </main>
 
@@ -967,20 +1007,11 @@ export const SortingBallsGame: React.FC<SortingBallsGameProps> = ({
         <SortingMenuModal
           progress={progress}
           onPlay={() => {
-            sortingAudio.playButton();
-            const lvlToPlay = progress.unlockedLevel || 1;
-            loadLevel(lvlToPlay);
-            setGameState('PLAYING');
-            requestAnimationFrame(() => {
-              if (renderer3DRef.current) {
-                renderer3DRef.current.resize();
-                const config = SORTING_LEVELS.find((l) => l.level === lvlToPlay) || SORTING_LEVELS[0];
-                renderer3DRef.current.setLevelState(config.tubes.map((t) => [...t]), null, 1);
-              }
-            });
+            startGame(progress.unlockedLevel || 1);
           }}
           onOpenLevels={() => {
             sortingAudio.playButton();
+            levelSelectSourceRef.current = 'MENU';
             setGameState('LEVEL_SELECT');
           }}
           onOpenLeaderboard={() => {
@@ -1069,13 +1100,11 @@ export const SortingBallsGame: React.FC<SortingBallsGameProps> = ({
          =================================================================== */}
       <SortingLevelSelectModal
         isOpen={gameState === 'LEVEL_SELECT'}
-        onClose={() => setGameState(gameState === 'LEVEL_SELECT' ? 'PLAYING' : 'MENU')}
+        onClose={() => setGameState(levelSelectSourceRef.current || 'MENU')}
         progress={progress}
         currentLevel={currentLevelNumber}
         onSelectLevel={(lvl) => {
-          sortingAudio.playButton();
-          loadLevel(lvl);
-          setGameState('PLAYING');
+          startGame(lvl);
         }}
       />
 
@@ -1090,18 +1119,14 @@ export const SortingBallsGame: React.FC<SortingBallsGameProps> = ({
         cumulativeTotalScore={progress.totalCumulativeScore}
         isNewBest={isNewBestScore}
         onNextLevel={() => {
-          sortingAudio.playButton();
           if (currentLevelNumber < TOTAL_SORTING_LEVELS) {
-            loadLevel(currentLevelNumber + 1);
-            setGameState('PLAYING');
+            startGame(currentLevelNumber + 1);
           } else {
             setGameState('LEADERBOARD');
           }
         }}
         onReplay={() => {
-          sortingAudio.playButton();
-          loadLevel(currentLevelNumber);
-          setGameState('PLAYING');
+          startGame(currentLevelNumber);
         }}
         onGoToMenu={() => {
           sortingAudio.playButton();
@@ -1112,6 +1137,32 @@ export const SortingBallsGame: React.FC<SortingBallsGameProps> = ({
           setGameState('LEADERBOARD');
         }}
       />
+
+      {/* Recoverable Error Modal */}
+      {gameState === 'ERROR' && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+          <div className="w-full max-w-sm rounded-2xl bg-[#E6D8C3] border border-[#D4C3AA] p-6 text-center shadow-xl space-y-4 font-['Plus_Jakarta_Sans',sans-serif]">
+            <h3 className="text-lg font-black text-[#40372F] uppercase">Level Initialization Error</h3>
+            <p className="text-xs text-[#786B5B] font-medium leading-relaxed">
+              Unable to load the selected puzzle board. Please retry or return to the menu.
+            </p>
+            <div className="flex gap-2 justify-center pt-2">
+              <button
+                onClick={() => startGame(currentLevelNumber || 1)}
+                className="px-5 py-2.5 rounded-xl bg-[#D58A36] hover:bg-[#c47b2c] active:scale-95 text-white text-xs font-bold uppercase tracking-wider transition-all cursor-pointer shadow-xs"
+              >
+                Retry
+              </button>
+              <button
+                onClick={() => setGameState('MENU')}
+                className="px-5 py-2.5 rounded-xl bg-[#D4C3AA] hover:bg-[#c4b39a] active:scale-95 text-[#40372F] text-xs font-bold uppercase tracking-wider transition-all cursor-pointer shadow-xs"
+              >
+                Menu
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Sample Reference Video Modal */}
       <SortingReferenceVideoModal

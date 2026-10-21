@@ -107,13 +107,15 @@ export class SortingRenderer3D {
   constructor(container: HTMLElement) {
     this.container = container;
 
+    // Helper: calculate robust dimensions with window fallback
+    const dims = this.getContainerDimensions();
+
     // 1. Scene
     this.scene = new THREE.Scene();
 
     // 2. Camera
-    const aspect = (container.clientWidth || 400) / (container.clientHeight || 600);
-    this.camera = new THREE.PerspectiveCamera(36, aspect, 0.1, 100);
-    this.updateCameraForAspect(aspect, 4);
+    this.camera = new THREE.PerspectiveCamera(36, dims.aspect, 0.1, 100);
+    this.updateCameraForAspect(dims.aspect, 4);
     this.camera.lookAt(0, 0, 0);
 
     // 3. WebGL Renderer
@@ -122,10 +124,19 @@ export class SortingRenderer3D {
       alpha: true,
       powerPreference: 'high-performance',
     });
-    this.renderer.setSize(container.clientWidth || 400, container.clientHeight || 600);
+    this.renderer.setSize(dims.width, dims.height);
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = 1.25;
+
+    // Direct canvas styling to prevent container collapse or mispositioning
+    this.renderer.domElement.style.position = 'absolute';
+    this.renderer.domElement.style.top = '0';
+    this.renderer.domElement.style.left = '0';
+    this.renderer.domElement.style.width = '100%';
+    this.renderer.domElement.style.height = '100%';
+    this.renderer.domElement.style.display = 'block';
+
     this.container.appendChild(this.renderer.domElement);
 
     // 4. Premium Lighting for Glass & Glossy Spheres
@@ -319,17 +330,27 @@ export class SortingRenderer3D {
 
     const targetZ = Math.max(requiredZ_X, requiredZ_Y, 6.8);
     this.camera.position.set(0, 0, targetZ);
+    this.camera.lookAt(0, 0, 0);
+  }
+
+  private getContainerDimensions(): { width: number; height: number; aspect: number } {
+    let width = this.container ? this.container.clientWidth : 0;
+    let height = this.container ? this.container.clientHeight : 0;
+    if (width <= 0 || height <= 0) {
+      width = window.innerWidth || 400;
+      height = window.innerHeight || 600;
+    }
+    const aspect = width / Math.max(1, height);
+    return { width, height, aspect };
   }
 
   private handleResize() {
     if (!this.container || !this.renderer || !this.camera) return;
-    const width = this.container.clientWidth || 400;
-    const height = this.container.clientHeight || 600;
-    const aspect = width / height;
-    this.camera.aspect = aspect;
-    this.updateCameraForAspect(aspect, this.currentTubes.length);
+    const dims = this.getContainerDimensions();
+    this.camera.aspect = dims.aspect;
+    this.updateCameraForAspect(dims.aspect, this.currentTubes.length);
     this.camera.updateProjectionMatrix();
-    this.renderer.setSize(width, height);
+    this.renderer.setSize(dims.width, dims.height);
   }
 
   public resize() {
@@ -364,8 +385,9 @@ export class SortingRenderer3D {
     this.computeLayout(tubes.length);
 
     // Update camera distance after layout positions are computed
-    const aspect = (this.container.clientWidth || 400) / (this.container.clientHeight || 600);
-    this.updateCameraForAspect(aspect, tubes.length);
+    const dims = this.getContainerDimensions();
+    this.camera.aspect = dims.aspect;
+    this.updateCameraForAspect(dims.aspect, tubes.length);
     this.camera.updateProjectionMatrix();
 
     // Build arena platform (clean continuous floor, no harsh divider line)
