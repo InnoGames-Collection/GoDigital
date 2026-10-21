@@ -150,11 +150,11 @@ export class SortingRenderer3D {
       roughness: 0.14,
     });
 
-    // Subtle glowing rim when selected (controlled highlight, no blinding flash)
+    // Subtle glowing rim when selected (controlled amber highlight, no blinding flash)
     this.rimSelectedMaterial = new THREE.MeshStandardMaterial({
-      color: 0xe0f2fe,
-      emissive: 0x38bdf8,
-      emissiveIntensity: 0.32,
+      color: 0xffedd5,
+      emissive: 0xd58a36,
+      emissiveIntensity: 0.35,
       metalness: 0.88,
       roughness: 0.12,
     });
@@ -165,7 +165,7 @@ export class SortingRenderer3D {
       roughness: 0.28,
     });
 
-    // Translucent Deep Blue / Flint Glass Tube Body (frames ball with high optical clarity)
+    // Translucent Flint Glass Tube Body (frames ball with high optical clarity)
     this.glassBodyMaterial = new THREE.MeshPhysicalMaterial({
       color: 0x38bdf8,
       transparent: true,
@@ -180,11 +180,11 @@ export class SortingRenderer3D {
       depthWrite: false,
     });
 
-    // Selected Tube Body: Subtle luminous flint glass glow (NO wireframe cage or stripes!)
+    // Selected Tube Body: Subtle luminous flint glass glow with amber warmth
     this.glassSelectedMaterial = new THREE.MeshPhysicalMaterial({
-      color: 0x60a5fa,
-      emissive: 0x0284c7,
-      emissiveIntensity: 0.14,
+      color: 0xfde68a,
+      emissive: 0xd58a36,
+      emissiveIntensity: 0.15,
       transparent: true,
       opacity: 0.38,
       roughness: 0.04,
@@ -197,42 +197,42 @@ export class SortingRenderer3D {
       depthWrite: false,
     });
 
-    // Deep Indigo-tinted back wall for internal optical depth & high ball contrast
+    // Warm-tinted subtle back wall for internal optical depth & pale ball contrast on #F3E9D8
     this.innerWallMaterial = new THREE.MeshBasicMaterial({
-      color: 0x071536,
+      color: 0x40372f,
       transparent: true,
-      opacity: 0.22,
+      opacity: 0.08,
       side: THREE.BackSide,
       depthWrite: false,
     });
 
-    // Realistic floor contact shadows
+    // Realistic warm neutral floor contact shadows anchoring tubes on #F3E9D8
     this.contactShadowMaterial = new THREE.MeshBasicMaterial({
-      color: 0x020617,
+      color: 0x2b2118,
       transparent: true,
-      opacity: 0.65,
+      opacity: 0.45,
       depthWrite: false,
     });
 
     this.penumbraShadowMaterial = new THREE.MeshBasicMaterial({
-      color: 0x081333,
+      color: 0x5a483a,
       transparent: true,
-      opacity: 0.35,
+      opacity: 0.22,
       depthWrite: false,
     });
 
     this.floorAuraMaterial = new THREE.MeshBasicMaterial({
-      color: 0x1d4ed8,
+      color: 0x786b5b,
       transparent: true,
-      opacity: 0.10,
+      opacity: 0.08,
       depthWrite: false,
     });
 
-    // Soft sapphire glow underneath selected tube (NO wireframe cage!)
+    // Soft warm amber glow underneath selected tube (NO wireframe cage!)
     this.floorSelectedAuraMaterial = new THREE.MeshBasicMaterial({
-      color: 0x38bdf8,
+      color: 0xd58a36,
       transparent: true,
-      opacity: 0.26,
+      opacity: 0.30,
       depthWrite: false,
     });
 
@@ -281,22 +281,22 @@ export class SortingRenderer3D {
   }
 
   private setupLighting() {
-    // Ambient fill with subtle cool tint
-    const ambientLight = new THREE.AmbientLight(0xdbeafe, 0.85);
+    // Ambient warm fill calibrated for Warm Ivory arena (#F3E9D8)
+    const ambientLight = new THREE.AmbientLight(0xfff7ed, 0.95);
     this.scene.add(ambientLight);
 
     // Key studio light (crisp spherical highlights on balls)
-    const keyLight = new THREE.DirectionalLight(0xffffff, 1.65);
+    const keyLight = new THREE.DirectionalLight(0xffffff, 1.60);
     keyLight.position.set(-3.2, 5.5, 4.8);
     this.scene.add(keyLight);
 
-    // Fill rim light from right with violet/blue accent
-    const rimLight = new THREE.DirectionalLight(0xa5b4fc, 0.75);
+    // Warm rim light from right with gentle golden accent
+    const rimLight = new THREE.DirectionalLight(0xfef3c7, 0.65);
     rimLight.position.set(3.8, 2.5, 3.4);
     this.scene.add(rimLight);
 
-    // Subtle bottom bounce light for rounded glass bottom cap
-    const bounceLight = new THREE.DirectionalLight(0x38bdf8, 0.35);
+    // Warm floor bounce light matching #F3E9D8 for glass bottom cap
+    const bounceLight = new THREE.DirectionalLight(0xf3e9d8, 0.40);
     bounceLight.position.set(0, -4.0, 2.0);
     this.scene.add(bounceLight);
   }

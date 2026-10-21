@@ -79,19 +79,19 @@ export const SortingReferenceVideoModal: React.FC<SortingReferenceVideoModalProp
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex flex-col justify-center items-center p-3 sm:p-6 select-none font-['Plus_Jakarta_Sans',sans-serif] animate-in fade-in duration-200">
-      <div className="relative w-full max-w-2xl bg-[#0f141f] rounded-3xl border border-white/20 shadow-2xl overflow-hidden flex flex-col">
+    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex flex-col justify-center items-center p-3 sm:p-6 select-none font-['Plus_Jakarta_Sans',sans-serif] animate-in fade-in duration-200">
+      <div className="relative w-full max-w-2xl bg-[#F3E9D8] rounded-3xl border border-[#D4C3AA] shadow-2xl overflow-hidden flex flex-col">
         {/* Modal Top Bar */}
-        <div className="flex items-center justify-between px-4 sm:px-6 py-3.5 border-b border-white/10 bg-[#171B26]">
+        <div className="flex items-center justify-between px-4 sm:px-6 py-3.5 border-b border-[#D4C3AA] bg-[#E6D8C3]">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-orange-500/20 border border-orange-500/50 flex items-center justify-center text-orange-400">
+            <div className="w-8 h-8 rounded-xl bg-[#F3E9D8] border border-[#D4C3AA] flex items-center justify-center text-[#D58A36]">
               <Film className="w-4 h-4" />
             </div>
             <div>
-              <h3 className="text-sm sm:text-base font-black text-white uppercase tracking-tight">
+              <h3 className="text-sm sm:text-base font-black text-[#40372F] uppercase tracking-tight">
                 Sorting Balls • Reference Video Showcase
               </h3>
-              <p className="text-[11px] text-slate-400">
+              <p className="text-[11px] text-[#786B5B]">
                 Visual demonstration of core 3D gameplay & controls
               </p>
             </div>
@@ -99,7 +99,7 @@ export const SortingReferenceVideoModal: React.FC<SortingReferenceVideoModalProp
 
           <button
             onClick={onClose}
-            className="w-9 h-9 rounded-xl bg-white/10 hover:bg-white/20 active:scale-95 text-white flex items-center justify-center transition-colors cursor-pointer"
+            className="w-9 h-9 rounded-xl bg-[#F3E9D8] hover:bg-[#d8c8b0] active:scale-95 text-[#40372F] flex items-center justify-center transition-colors cursor-pointer border border-[#D4C3AA]"
             aria-label="Close"
           >
             <X className="w-5 h-5" />

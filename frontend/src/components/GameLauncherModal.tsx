@@ -114,7 +114,10 @@ export const GameLauncherModal: React.FC<GameLauncherModalProps> = ({
 
   if (game.id === 'sorting-balls') {
     return (
-      <div className="fixed inset-0 z-50 bg-[#090A10] flex flex-col justify-center items-center overflow-hidden animate-in fade-in duration-200 font-['Plus_Jakarta_Sans',sans-serif] touch-none overscroll-none select-none">
+      <div
+        className="fixed inset-0 z-50 flex flex-col justify-center items-center overflow-hidden animate-in fade-in duration-200 font-['Plus_Jakarta_Sans',sans-serif] touch-none overscroll-none select-none"
+        style={{ backgroundColor: '#F3E9D8' }}
+      >
         <SortingBallsGame
           game={game}
           profile={profile}

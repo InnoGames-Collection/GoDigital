@@ -19,25 +19,28 @@ export const SortingSettingsModal: React.FC<SortingSettingsModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 bg-[#070b16]/95 backdrop-blur-md flex flex-col justify-start items-center p-4 sm:p-6 overflow-y-auto select-none font-['Plus_Jakarta_Sans',sans-serif]">
+    <div
+      className="fixed inset-0 z-50 flex flex-col justify-start items-center p-4 sm:p-6 overflow-y-auto select-none font-['Plus_Jakarta_Sans',sans-serif]"
+      style={{ backgroundColor: '#F3E9D8', color: '#40372F' }}
+    >
       <div className="w-full max-w-md mx-auto space-y-4 pb-8 my-auto">
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-white/10 pb-3">
+        <div className="flex items-center justify-between border-b border-[#D4C3AA] pb-3">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-slate-500/20 border border-slate-500/30 flex items-center justify-center text-slate-300">
+            <div className="w-10 h-10 rounded-xl bg-[#E6D8C3] border border-[#D4C3AA] flex items-center justify-center text-[#786B5B]">
               <Settings className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="text-xl sm:text-2xl font-black text-white uppercase tracking-tight">
+              <h2 className="text-xl sm:text-2xl font-black text-[#40372F] uppercase tracking-tight">
                 SETTINGS
               </h2>
-              <p className="text-xs text-slate-400">Audio & Gameplay Preferences</p>
+              <p className="text-xs text-[#786B5B]">Audio & Gameplay Preferences</p>
             </div>
           </div>
 
           <button
             onClick={onClose}
-            className="w-10 h-10 rounded-xl bg-white/10 hover:bg-white/20 active:scale-95 text-white flex items-center justify-center transition-colors cursor-pointer border border-white/10"
+            className="w-10 h-10 rounded-xl bg-[#E6D8C3] hover:bg-[#d8c8b0] active:scale-95 text-[#40372F] flex items-center justify-center transition-colors cursor-pointer border border-[#D4C3AA]"
             aria-label="Close Settings"
           >
             <X className="w-5 h-5" />
@@ -47,20 +50,20 @@ export const SortingSettingsModal: React.FC<SortingSettingsModalProps> = ({
         {/* Toggles */}
         <div className="space-y-2.5">
           {/* Sound FX */}
-          <div className="p-3.5 rounded-2xl bg-white/[0.04] border border-white/10 flex items-center justify-between">
+          <div className="p-3.5 rounded-2xl bg-[#E6D8C3] border border-[#D4C3AA] flex items-center justify-between shadow-xs">
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-cyan-500/15 text-cyan-400 flex items-center justify-center">
+              <div className="w-9 h-9 rounded-xl bg-[#F3E9D8] border border-[#D4C3AA] text-[#D58A36] flex items-center justify-center">
                 {soundEnabled ? <Volume2 className="w-5 h-5" /> : <VolumeX className="w-5 h-5" />}
               </div>
               <div>
-                <div className="text-xs font-bold text-white">Sound Effects</div>
-                <div className="text-[11px] text-slate-400">Ball moves, completion chime</div>
+                <div className="text-xs font-bold text-[#40372F]">Sound Effects</div>
+                <div className="text-[11px] text-[#786B5B]">Ball moves, completion chime</div>
               </div>
             </div>
             <button
               onClick={() => setSoundEnabled(!soundEnabled)}
               className={`w-12 h-7 rounded-full transition-colors relative cursor-pointer ${
-                soundEnabled ? 'bg-cyan-500' : 'bg-slate-700'
+                soundEnabled ? 'bg-[#D58A36]' : 'bg-[#D4C3AA]'
               }`}
             >
               <div
@@ -72,20 +75,20 @@ export const SortingSettingsModal: React.FC<SortingSettingsModalProps> = ({
           </div>
 
           {/* Haptics */}
-          <div className="p-3.5 rounded-2xl bg-white/[0.04] border border-white/10 flex items-center justify-between">
+          <div className="p-3.5 rounded-2xl bg-[#E6D8C3] border border-[#D4C3AA] flex items-center justify-between shadow-xs">
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-blue-500/15 text-blue-400 flex items-center justify-center">
+              <div className="w-9 h-9 rounded-xl bg-[#F3E9D8] border border-[#D4C3AA] text-[#648B75] flex items-center justify-center">
                 <Smartphone className="w-5 h-5" />
               </div>
               <div>
-                <div className="text-xs font-bold text-white">Vibration / Haptics</div>
-                <div className="text-[11px] text-slate-400">Tactile tap feedback</div>
+                <div className="text-xs font-bold text-[#40372F]">Vibration / Haptics</div>
+                <div className="text-[11px] text-[#786B5B]">Tactile tap feedback</div>
               </div>
             </div>
             <button
               onClick={() => setHapticsEnabled(!hapticsEnabled)}
               className={`w-12 h-7 rounded-full transition-colors relative cursor-pointer ${
-                hapticsEnabled ? 'bg-blue-500' : 'bg-slate-700'
+                hapticsEnabled ? 'bg-[#648B75]' : 'bg-[#D4C3AA]'
               }`}
             >
               <div
@@ -102,15 +105,15 @@ export const SortingSettingsModal: React.FC<SortingSettingsModalProps> = ({
           {!showConfirmReset ? (
             <button
               onClick={() => setShowConfirmReset(true)}
-              className="w-full py-3 px-4 rounded-xl border border-rose-500/30 bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 transition-colors cursor-pointer"
+              className="w-full py-3 px-4 rounded-xl border border-[#D4C3AA] bg-[#E6D8C3] hover:bg-rose-50 text-rose-700 text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 transition-colors cursor-pointer shadow-xs"
             >
               <RotateCcw className="w-4 h-4" />
               <span>Reset Game Progress</span>
             </button>
           ) : (
-            <div className="p-4 rounded-2xl bg-rose-500/15 border border-rose-500/40 space-y-3">
-              <div className="flex items-center gap-2 text-rose-300 text-xs font-bold">
-                <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0" />
+            <div className="p-4 rounded-2xl bg-[#E6D8C3] border-2 border-rose-300 space-y-3 shadow-sm">
+              <div className="flex items-center gap-2 text-rose-800 text-xs font-bold">
+                <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
                 <span>Are you sure you want to reset all 40 levels and scores?</span>
               </div>
               <div className="grid grid-cols-2 gap-2">
@@ -126,7 +129,7 @@ export const SortingSettingsModal: React.FC<SortingSettingsModalProps> = ({
                 </button>
                 <button
                   onClick={() => setShowConfirmReset(false)}
-                  className="py-2.5 rounded-lg bg-white/10 hover:bg-white/20 text-white text-xs font-bold uppercase transition-colors cursor-pointer"
+                  className="py-2.5 rounded-lg bg-[#D4C3AA] hover:bg-[#c4b39a] text-[#40372F] text-xs font-bold uppercase transition-colors cursor-pointer"
                 >
                   Cancel
                 </button>

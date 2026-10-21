@@ -1,5 +1,5 @@
 import React from 'react';
-import { Award, X, CheckCircle, Lock, Trophy } from 'lucide-react';
+import { Award, X, CheckCircle, Lock } from 'lucide-react';
 import { SortingPlayerProgress, SortingAchievement } from '../types';
 
 interface SortingAchievementsModalProps {
@@ -97,19 +97,22 @@ export const SortingAchievementsModal: React.FC<SortingAchievementsModalProps> =
   const unlockedCount = achievements.filter((a) => a.unlocked).length;
 
   return (
-    <div className="fixed inset-0 z-50 bg-[#070b16]/95 backdrop-blur-md flex flex-col justify-start items-center p-4 sm:p-6 overflow-y-auto select-none font-['Plus_Jakarta_Sans',sans-serif]">
+    <div
+      className="fixed inset-0 z-50 flex flex-col justify-start items-center p-4 sm:p-6 overflow-y-auto select-none font-['Plus_Jakarta_Sans',sans-serif]"
+      style={{ backgroundColor: '#F3E9D8', color: '#40372F' }}
+    >
       <div className="w-full max-w-lg mx-auto space-y-4 pb-8 my-auto">
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-white/10 pb-3">
+        <div className="flex items-center justify-between border-b border-[#D4C3AA] pb-3">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-purple-500/20 border border-purple-500/30 flex items-center justify-center text-purple-400">
+            <div className="w-10 h-10 rounded-xl bg-[#E6D8C3] border border-[#D4C3AA] flex items-center justify-center text-[#D58A36]">
               <Award className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="text-xl sm:text-2xl font-black text-white uppercase tracking-tight">
+              <h2 className="text-xl sm:text-2xl font-black text-[#40372F] uppercase tracking-tight">
                 ACHIEVEMENTS
               </h2>
-              <p className="text-xs text-slate-400">
+              <p className="text-xs text-[#786B5B]">
                 {unlockedCount} of {achievements.length} Unlocked
               </p>
             </div>
@@ -117,7 +120,7 @@ export const SortingAchievementsModal: React.FC<SortingAchievementsModalProps> =
 
           <button
             onClick={onClose}
-            className="w-10 h-10 rounded-xl bg-white/10 hover:bg-white/20 active:scale-95 text-white flex items-center justify-center transition-colors cursor-pointer border border-white/10"
+            className="w-10 h-10 rounded-xl bg-[#E6D8C3] hover:bg-[#d8c8b0] active:scale-95 text-[#40372F] flex items-center justify-center transition-colors cursor-pointer border border-[#D4C3AA]"
             aria-label="Close Achievements"
           >
             <X className="w-5 h-5" />
@@ -129,31 +132,31 @@ export const SortingAchievementsModal: React.FC<SortingAchievementsModalProps> =
           {achievements.map((ach) => (
             <div
               key={ach.id}
-              className={`p-3.5 rounded-2xl border transition-all flex items-center justify-between ${
+              className={`p-3.5 rounded-2xl border transition-all flex items-center justify-between shadow-xs ${
                 ach.unlocked
-                  ? 'bg-purple-500/10 border-purple-500/30 text-white'
-                  : 'bg-white/[0.02] border-white/5 text-slate-400 opacity-60'
+                  ? 'bg-[#E6D8C3] border-[#648B75]/50 text-[#40372F]'
+                  : 'bg-[#E6D8C3]/50 border-[#D4C3AA] text-[#786B5B] opacity-60'
               }`}
             >
               <div className="flex items-center gap-3">
                 <div
                   className={`w-10 h-10 rounded-xl flex items-center justify-center text-lg border ${
                     ach.unlocked
-                      ? 'bg-purple-500/20 border-purple-400/40 text-purple-300'
-                      : 'bg-white/5 border-white/10 text-slate-500'
+                      ? 'bg-[#F3E9D8] border-[#648B75]/40 text-[#648B75]'
+                      : 'bg-[#F3E9D8]/50 border-[#D4C3AA] text-[#786B5B]'
                   }`}
                 >
                   {ach.icon}
                 </div>
 
                 <div>
-                  <div className="text-xs font-bold text-white flex items-center gap-1.5">
+                  <div className="text-xs font-bold text-[#40372F] flex items-center gap-1.5">
                     <span>{ach.title}</span>
                     {ach.unlocked && (
-                      <CheckCircle className="w-3.5 h-3.5 text-emerald-400" />
+                      <CheckCircle className="w-3.5 h-3.5 text-[#648B75]" />
                     )}
                   </div>
-                  <div className="text-[11px] text-slate-400">
+                  <div className="text-[11px] text-[#786B5B]">
                     {ach.description}
                   </div>
                 </div>
@@ -161,11 +164,11 @@ export const SortingAchievementsModal: React.FC<SortingAchievementsModalProps> =
 
               <div className="text-right font-mono text-xs">
                 {ach.unlocked ? (
-                  <span className="text-emerald-400 font-bold uppercase tracking-wider text-[10px]">
+                  <span className="text-[#648B75] font-black uppercase tracking-wider text-[10px]">
                     UNLOCKED
                   </span>
                 ) : (
-                  <span className="text-slate-500 flex items-center gap-1 text-[11px]">
+                  <span className="text-[#786B5B] flex items-center gap-1 text-[11px]">
                     <Lock className="w-3 h-3" />
                     {ach.current} / {ach.target}
                   </span>

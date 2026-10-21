@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { Grid, X, Lock, Star, CheckCircle, Trophy, Flame } from 'lucide-react';
+import { Grid, X, Lock, Star, CheckCircle } from 'lucide-react';
 import { SortingPlayerProgress } from '../types';
-import { TOTAL_SORTING_LEVELS, SORTING_LEVELS } from '../levels';
+import { SORTING_LEVELS } from '../levels';
 
 interface SortingLevelSelectModalProps {
   isOpen: boolean;
@@ -40,19 +40,22 @@ export const SortingLevelSelectModal: React.FC<SortingLevelSelectModalProps> = (
   const tierLevels = Array.from({ length: endLvl - startLvl + 1 }, (_, i) => startLvl + i);
 
   return (
-    <div className="fixed inset-0 z-50 bg-[#070b16]/95 backdrop-blur-md flex flex-col justify-start items-center p-4 sm:p-6 overflow-y-auto select-none font-['Plus_Jakarta_Sans',sans-serif]">
+    <div
+      className="fixed inset-0 z-50 flex flex-col justify-start items-center p-4 sm:p-6 overflow-y-auto select-none font-['Plus_Jakarta_Sans',sans-serif]"
+      style={{ backgroundColor: '#F3E9D8', color: '#40372F' }}
+    >
       <div className="w-full max-w-lg mx-auto space-y-4 pb-8 my-auto">
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-white/10 pb-3">
+        <div className="flex items-center justify-between border-b border-[#D4C3AA] pb-3">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-cyan-500/20 border border-cyan-500/30 flex items-center justify-center text-cyan-400">
+            <div className="w-10 h-10 rounded-xl bg-[#E6D8C3] border border-[#D4C3AA] flex items-center justify-center text-[#D58A36]">
               <Grid className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="text-xl sm:text-2xl font-black text-white uppercase tracking-tight">
+              <h2 className="text-xl sm:text-2xl font-black text-[#40372F] uppercase tracking-tight">
                 SELECT LEVEL
               </h2>
-              <p className="text-xs text-slate-400">
+              <p className="text-xs text-[#786B5B]">
                 40 Progressive Championship Puzzles
               </p>
             </div>
@@ -60,7 +63,7 @@ export const SortingLevelSelectModal: React.FC<SortingLevelSelectModalProps> = (
 
           <button
             onClick={onClose}
-            className="w-10 h-10 rounded-xl bg-white/10 hover:bg-white/20 active:scale-95 text-white flex items-center justify-center transition-colors cursor-pointer border border-white/10"
+            className="w-10 h-10 rounded-xl bg-[#E6D8C3] hover:bg-[#d8c8b0] active:scale-95 text-[#40372F] flex items-center justify-center transition-colors cursor-pointer border border-[#D4C3AA]"
             aria-label="Close Level Select"
           >
             <X className="w-5 h-5" />
@@ -68,15 +71,15 @@ export const SortingLevelSelectModal: React.FC<SortingLevelSelectModalProps> = (
         </div>
 
         {/* Tier Selector Tabs */}
-        <div className="grid grid-cols-4 gap-1.5 p-1 rounded-xl bg-black/40 border border-white/10">
+        <div className="grid grid-cols-4 gap-1.5 p-1 rounded-xl bg-[#E6D8C3] border border-[#D4C3AA]">
           {tiers.map((t) => (
             <button
               key={t.id}
               onClick={() => setSelectedTier(t.id)}
               className={`py-2 px-1 rounded-lg text-center transition-all cursor-pointer ${
                 selectedTier === t.id
-                  ? 'bg-cyan-500 text-black font-black shadow-md'
-                  : 'text-slate-400 hover:text-white font-semibold'
+                  ? 'bg-[#D58A36] text-white font-black shadow-xs'
+                  : 'text-[#786B5B] hover:text-[#40372F] font-semibold'
               }`}
             >
               <div className="text-[11px] leading-none uppercase">
@@ -87,9 +90,9 @@ export const SortingLevelSelectModal: React.FC<SortingLevelSelectModalProps> = (
         </div>
 
         {/* Tier Description */}
-        <div className="flex items-center justify-between px-1 text-xs text-slate-400">
-          <span className="font-semibold text-slate-300">{currentTierObj.name}</span>
-          <span className="text-cyan-400 font-mono text-[11px]">{currentTierObj.desc}</span>
+        <div className="flex items-center justify-between px-1 text-xs text-[#786B5B]">
+          <span className="font-semibold text-[#40372F]">{currentTierObj.name}</span>
+          <span className="text-[#D58A36] font-mono text-[11px] font-bold">{currentTierObj.desc}</span>
         </div>
 
         {/* 10 Level Cards in Current Tier */}
@@ -114,25 +117,25 @@ export const SortingLevelSelectModal: React.FC<SortingLevelSelectModalProps> = (
                 }}
                 className={`p-3 rounded-2xl flex flex-col items-center justify-between min-h-[96px] transition-all cursor-pointer relative border ${
                   !isUnlocked
-                    ? 'bg-white/[0.02] border-white/5 opacity-50 cursor-not-allowed'
+                    ? 'bg-[#E6D8C3]/40 border-[#D4C3AA]/40 opacity-45 cursor-not-allowed'
                     : isCurrent
-                    ? 'bg-gradient-to-b from-cyan-500/25 to-blue-600/25 border-cyan-400 ring-2 ring-cyan-400/40 shadow-lg'
+                    ? 'bg-[#E6D8C3] border-2 border-[#D58A36] ring-2 ring-[#D58A36]/30 shadow-md'
                     : isCompleted
-                    ? 'bg-white/[0.05] border-emerald-500/40 hover:bg-white/[0.09]'
-                    : 'bg-white/[0.04] border-white/10 hover:bg-white/[0.08]'
+                    ? 'bg-[#E6D8C3] border-[#648B75]/50 hover:bg-[#dfd0bb]'
+                    : 'bg-[#E6D8C3] border-[#D4C3AA] hover:bg-[#dfd0bb]'
                 }`}
               >
                 {/* Top: Level Number & Lock / Completed Icon */}
                 <div className="w-full flex items-center justify-between">
-                  <span className="text-xs font-black font-mono text-white">
+                  <span className="text-xs font-black font-mono text-[#40372F]">
                     #{lvl}
                   </span>
                   {!isUnlocked ? (
-                    <Lock className="w-3.5 h-3.5 text-slate-500" />
+                    <Lock className="w-3.5 h-3.5 text-[#786B5B]" />
                   ) : isCompleted ? (
-                    <CheckCircle className="w-3.5 h-3.5 text-emerald-400" />
+                    <CheckCircle className="w-3.5 h-3.5 text-[#648B75]" />
                   ) : (
-                    <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
+                    <span className="w-2 h-2 rounded-full bg-[#D58A36] animate-pulse" />
                   )}
                 </div>
 
@@ -143,23 +146,23 @@ export const SortingLevelSelectModal: React.FC<SortingLevelSelectModalProps> = (
                       key={s}
                       className={`w-3 h-3 ${
                         s <= stars
-                          ? 'text-amber-400 fill-amber-400'
-                          : 'text-slate-600'
+                          ? 'text-[#D58A36] fill-[#D58A36]'
+                          : 'text-[#D4C3AA]'
                       }`}
                     />
                   ))}
                 </div>
 
                 {/* Bottom: Score or Par */}
-                <div className="text-[10px] font-mono text-slate-400 w-full text-center truncate">
+                <div className="text-[10px] font-mono text-[#786B5B] w-full text-center truncate">
                   {bestScore > 0 ? (
-                    <span className="text-amber-300 font-bold">
+                    <span className="text-[#D58A36] font-bold">
                       {bestScore} pts
                     </span>
                   ) : isUnlocked ? (
-                    <span className="text-slate-500">Par {optimalMoves}</span>
+                    <span className="text-[#786B5B]">Par {optimalMoves}</span>
                   ) : (
-                    <span className="text-slate-600">Locked</span>
+                    <span className="text-[#786B5B]/60">Locked</span>
                   )}
                 </div>
               </button>

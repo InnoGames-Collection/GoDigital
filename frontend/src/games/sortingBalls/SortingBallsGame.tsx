@@ -275,19 +275,26 @@ export const SortingBallsGame: React.FC<SortingBallsGameProps> = ({
   useEffect(() => {
     if (!canvasContainerRef.current) return;
 
-    const renderer = new SortingRenderer3D(canvasContainerRef.current);
-    renderer3DRef.current = renderer;
+    let renderer: SortingRenderer3D | null = null;
+    try {
+      renderer = new SortingRenderer3D(canvasContainerRef.current);
+      renderer3DRef.current = renderer;
 
-    // Immediately pre-populate the 3D scene with current level tubes so the board is ready before Play
-    const lvl = currentLevelNumber || progress.unlockedLevel || 1;
-    const config = SORTING_LEVELS.find((l) => l.level === lvl) || SORTING_LEVELS[0];
-    const initialTubes = config.tubes.map((t) => [...t]);
-    setCurrentTubes(initialTubes);
-    renderer.setLevelState(initialTubes, null, 1);
-    renderer.resize();
+      // Immediately pre-populate the 3D scene with current level tubes so the board is ready before Play
+      const lvl = currentLevelNumber || progress.unlockedLevel || 1;
+      const config = SORTING_LEVELS.find((l) => l.level === lvl) || SORTING_LEVELS[0];
+      const initialTubes = config.tubes.map((t) => [...t]);
+      setCurrentTubes(initialTubes);
+      renderer.setLevelState(initialTubes, null, 1);
+      renderer.resize();
+    } catch (err) {
+      console.warn('SortingBalls: WebGL initialization failed on this device:', err);
+    }
 
     return () => {
-      renderer.dispose();
+      if (renderer) {
+        renderer.dispose();
+      }
       renderer3DRef.current = null;
     };
   }, []);

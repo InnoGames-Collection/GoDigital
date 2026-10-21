@@ -1,5 +1,5 @@
 import React from 'react';
-import { HelpCircle, X, CheckCircle, ArrowRight, Zap, AlertTriangle, ShieldCheck, Flame } from 'lucide-react';
+import { HelpCircle, X, Flame } from 'lucide-react';
 
 interface SortingHowToPlayModalProps {
   isOpen: boolean;
@@ -70,19 +70,22 @@ export const SortingHowToPlayModal: React.FC<SortingHowToPlayModalProps> = ({
   ];
 
   return (
-    <div className="fixed inset-0 z-50 bg-[#070b16]/95 backdrop-blur-md flex flex-col justify-start items-center p-4 sm:p-6 overflow-y-auto select-none font-['Plus_Jakarta_Sans',sans-serif]">
+    <div
+      className="fixed inset-0 z-50 flex flex-col justify-start items-center p-4 sm:p-6 overflow-y-auto select-none font-['Plus_Jakarta_Sans',sans-serif]"
+      style={{ backgroundColor: '#F3E9D8', color: '#40372F' }}
+    >
       <div className="w-full max-w-lg mx-auto space-y-4 pb-8 my-auto">
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-white/10 pb-3">
+        <div className="flex items-center justify-between border-b border-[#D4C3AA] pb-3">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
+            <div className="w-10 h-10 rounded-xl bg-[#E6D8C3] border border-[#D4C3AA] flex items-center justify-center text-[#648B75]">
               <HelpCircle className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="text-xl sm:text-2xl font-black text-white uppercase tracking-tight">
+              <h2 className="text-xl sm:text-2xl font-black text-[#40372F] uppercase tracking-tight">
                 HOW TO PLAY
               </h2>
-              <p className="text-xs text-slate-400">
+              <p className="text-xs text-[#786B5B]">
                 Official Rules & Competitive Strategy Guide
               </p>
             </div>
@@ -90,7 +93,7 @@ export const SortingHowToPlayModal: React.FC<SortingHowToPlayModalProps> = ({
 
           <button
             onClick={onClose}
-            className="w-10 h-10 rounded-xl bg-white/10 hover:bg-white/20 active:scale-95 text-white flex items-center justify-center transition-colors cursor-pointer border border-white/10"
+            className="w-10 h-10 rounded-xl bg-[#E6D8C3] hover:bg-[#d8c8b0] active:scale-95 text-[#40372F] flex items-center justify-center transition-colors cursor-pointer border border-[#D4C3AA]"
             aria-label="Close How To Play"
           >
             <X className="w-5 h-5" />
@@ -102,18 +105,18 @@ export const SortingHowToPlayModal: React.FC<SortingHowToPlayModalProps> = ({
           {rules.map((rule) => (
             <div
               key={rule.num}
-              className="p-3 rounded-2xl bg-white/[0.04] border border-white/10 flex items-start gap-3 hover:bg-white/[0.07] transition-all"
+              className="p-3 rounded-2xl bg-[#E6D8C3] border border-[#D4C3AA] flex items-start gap-3 hover:bg-[#dfd0bb] transition-all shadow-xs"
             >
-              <div className="w-8 h-8 rounded-xl bg-cyan-500/15 border border-cyan-400/30 text-cyan-300 font-black font-mono flex items-center justify-center text-xs shrink-0 mt-0.5">
+              <div className="w-8 h-8 rounded-xl bg-[#F3E9D8] border border-[#D4C3AA] text-[#D58A36] font-black font-mono flex items-center justify-center text-xs shrink-0 mt-0.5">
                 {rule.num}
               </div>
 
               <div className="space-y-0.5">
-                <div className="text-xs font-bold text-white flex items-center gap-1.5">
+                <div className="text-xs font-bold text-[#40372F] flex items-center gap-1.5">
                   <span>{rule.icon}</span>
                   <span>{rule.title}</span>
                 </div>
-                <p className="text-[11px] text-slate-300 leading-relaxed font-normal">
+                <p className="text-[11px] text-[#786B5B] leading-relaxed font-normal">
                   {rule.desc}
                 </p>
               </div>
@@ -122,10 +125,10 @@ export const SortingHowToPlayModal: React.FC<SortingHowToPlayModalProps> = ({
         </div>
 
         {/* Pro Tip Callout */}
-        <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center gap-3">
-          <Flame className="w-5 h-5 text-amber-400 shrink-0" />
-          <p className="text-[11px] text-amber-200 leading-normal">
-            <strong>Pro Tip:</strong> Replaying a completed level with fewer moves or faster time will update your level best and increase your total cumulative score!
+        <div className="p-3.5 rounded-2xl bg-[#E6D8C3] border-2 border-[#D58A36]/60 flex items-center gap-3 shadow-xs">
+          <Flame className="w-5 h-5 text-[#D58A36] shrink-0" />
+          <p className="text-[11px] text-[#40372F] leading-normal">
+            <strong className="text-[#D58A36]">Pro Tip:</strong> Replaying a completed level with fewer moves or faster time will update your level best and increase your total cumulative score!
           </p>
         </div>
       </div>
