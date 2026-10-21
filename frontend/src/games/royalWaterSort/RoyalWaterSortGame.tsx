@@ -1577,11 +1577,12 @@ export const RoyalWaterSortGame: React.FC<RoyalWaterSortGameProps> = ({
               <button
                 onClick={() => {
                   royalWaterSortAudio.playClick();
-                  royalWaterSortAudio.pauseAll();
-                  setScreen('PAUSED');
+                  royalWaterSortAudio.stopAll();
+                  setScreen('MENU');
                 }}
                 className="w-10 h-10 rounded-xl bg-white/10 hover:bg-white/20 active:scale-95 text-white flex items-center justify-center border border-white/15 transition-all cursor-pointer"
-                aria-label="Pause and open menu"
+                aria-label="Back to Menu"
+                title="Back to Menu"
               >
                 <ArrowLeft className="w-4 h-4 text-white" />
               </button>
