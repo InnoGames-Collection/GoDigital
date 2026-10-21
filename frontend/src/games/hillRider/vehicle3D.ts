@@ -175,19 +175,56 @@ export function createVehicle3D(): VehicleMeshRig {
     chassisGroup.add(s);
   });
 
-  // Front Bull-Bar Bumper & Skid Plate
-  const bumperBarGeo = new THREE.CylinderGeometry(0.07, 0.07, CHASSIS_WIDTH - 0.2, 8);
-  bumperBarGeo.rotateX(Math.PI / 2);
-  const bumperBar = new THREE.Mesh(bumperBarGeo, chromeMat);
-  bumperBar.position.set(CHASSIS_LENGTH / 2 + 0.18, 0.32, 0);
-  bumperBar.castShadow = true;
-  chassisGroup.add(bumperBar);
+  // ==========================================
+  // 1B. FRONT WINCH, SHACKLES & RALLY FOG PODS
+  // ==========================================
+  // Front Heavy-Duty Winch Housing & Cable Drum
+  const winchBodyGeo = new THREE.BoxGeometry(0.32, 0.22, 0.48);
+  const winchBody = new THREE.Mesh(winchBodyGeo, carbonChassisMat);
+  winchBody.position.set(CHASSIS_LENGTH / 2 + 0.16, 0.28, 0);
+  chassisGroup.add(winchBody);
 
-  const skidPlateGeo = new THREE.BoxGeometry(0.6, 0.08, CHASSIS_WIDTH - 0.6);
-  const skidPlate = new THREE.Mesh(skidPlateGeo, chromeMat);
-  skidPlate.position.set(CHASSIS_LENGTH / 2 + 0.05, 0.15, 0);
-  skidPlate.rotation.z = 0.5;
-  chassisGroup.add(skidPlate);
+  const winchDrumGeo = new THREE.CylinderGeometry(0.08, 0.08, 0.28, 12);
+  winchDrumGeo.rotateX(Math.PI / 2);
+  const winchDrum = new THREE.Mesh(winchDrumGeo, chromeMat);
+  winchDrum.position.set(CHASSIS_LENGTH / 2 + 0.20, 0.28, 0);
+  chassisGroup.add(winchDrum);
+
+  // Recovery D-Rings (Orange Powdercoated)
+  const shackleMat = new THREE.MeshStandardMaterial({
+    color: 0xf97316,
+    metalness: 0.8,
+    roughness: 0.2,
+  });
+  const shackleGeo = new THREE.TorusGeometry(0.07, 0.022, 6, 12);
+  [-0.32, 0.32].forEach((zOff) => {
+    const shackle = new THREE.Mesh(shackleGeo, shackleMat);
+    shackle.position.set(CHASSIS_LENGTH / 2 + 0.22, 0.16, zOff);
+    shackle.rotation.y = Math.PI / 2;
+    chassisGroup.add(shackle);
+  });
+
+  // Dual Amber Rally Fog Light Pods on Bull-Bar
+  const fogLensMat = new THREE.MeshStandardMaterial({
+    color: 0xf59e0b,
+    emissive: 0xd97706,
+    emissiveIntensity: 0.85,
+    roughness: 0.1,
+  });
+  const fogHousingGeo = new THREE.CylinderGeometry(0.12, 0.12, 0.10, 10);
+  fogHousingGeo.rotateZ(Math.PI / 2);
+  [-0.32, 0.32].forEach((zOff) => {
+    const fogPod = new THREE.Mesh(fogHousingGeo, carbonChassisMat);
+    fogPod.position.set(CHASSIS_LENGTH / 2 + 0.16, 0.44, zOff);
+    chassisGroup.add(fogPod);
+
+    const fogLens = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.10, 0.10, 0.04, 10).rotateZ(Math.PI / 2),
+      fogLensMat
+    );
+    fogLens.position.set(CHASSIS_LENGTH / 2 + 0.21, 0.44, zOff);
+    chassisGroup.add(fogLens);
+  });
 
   // ==========================================
   // 2. CABIN, ROLL CAGE & WINDSHIELD
@@ -207,33 +244,84 @@ export function createVehicle3D(): VehicleMeshRig {
   roofMesh.castShadow = true;
   chassisGroup.add(roofMesh);
 
-  // Roof Air Intake
-  const roofIntakeGeo = new THREE.BoxGeometry(0.45, 0.12, 0.5);
-  const roofIntake = new THREE.Mesh(roofIntakeGeo, vibrantLimeMat);
-  roofIntake.position.set(-0.25, 1.34, 0);
-  chassisGroup.add(roofIntake);
+  // Safari Roof Rack Basket
+  const rackMat = new THREE.MeshStandardMaterial({
+    color: 0x0f172a,
+    metalness: 0.9,
+    roughness: 0.2,
+  });
+  const rackFrameGeo = new THREE.BoxGeometry(0.92, 0.10, CHASSIS_WIDTH - 0.52);
+  const rackFrame = new THREE.Mesh(rackFrameGeo, rackMat);
+  rackFrame.position.set(-0.35, 1.34, 0);
+  chassisGroup.add(rackFrame);
 
-  // Tubular Roll Cage Structure
-  const cageBarGeo = new THREE.CylinderGeometry(0.045, 0.045, 1.1, 6);
-  [-0.75, 0.75].forEach((zOffset) => {
-    // Front A-Pillar Bar
-    const aPillar = new THREE.Mesh(cageBarGeo, rollCageMat);
-    aPillar.position.set(0.15, 0.9, zOffset);
-    aPillar.rotation.z = -0.55;
-    chassisGroup.add(aPillar);
+  // Roof Mounted Full-Size Spare Off-Road Wheel
+  const spareWheelGeo = new THREE.CylinderGeometry(0.52, 0.52, 0.30, 14);
+  const spareWheel = new THREE.Mesh(spareWheelGeo, tireRubberMat);
+  spareWheel.position.set(-0.38, 1.46, 0);
+  spareWheel.rotation.x = Math.PI / 2;
+  spareWheel.rotation.z = -0.15;
+  spareWheel.castShadow = true;
+  chassisGroup.add(spareWheel);
 
-    // Rear B-Pillar Bar
-    const bPillar = new THREE.Mesh(cageBarGeo, rollCageMat);
-    bPillar.position.set(-0.85, 0.9, zOffset);
-    bPillar.rotation.z = 0.35;
-    chassisGroup.add(bPillar);
+  const spareRimGeo = new THREE.CylinderGeometry(0.32, 0.32, 0.32, 10);
+  const spareRim = new THREE.Mesh(spareRimGeo, chromeMat);
+  spareRim.position.set(-0.38, 1.46, 0);
+  spareRim.rotation.x = Math.PI / 2;
+  spareRim.rotation.z = -0.15;
+  chassisGroup.add(spareRim);
+
+  // Spare Wheel Tie-Down Ratchet Straps (Yellow)
+  const strapMat = new THREE.MeshStandardMaterial({ color: 0xfacc15, roughness: 0.7 });
+  const strapGeo = new THREE.BoxGeometry(0.04, 0.04, 1.12);
+  const strap = new THREE.Mesh(strapGeo, strapMat);
+  strap.position.set(-0.38, 1.63, 0);
+  chassisGroup.add(strap);
+
+  // Roof Front 5-Pod High-Intensity LED Light Bar
+  const lightBarMountGeo = new THREE.BoxGeometry(0.08, 0.08, CHASSIS_WIDTH - 0.55);
+  const lightBarMount = new THREE.Mesh(lightBarMountGeo, carbonChassisMat);
+  lightBarMount.position.set(0.12, 1.38, 0);
+  chassisGroup.add(lightBarMount);
+
+  const podGeo = new THREE.BoxGeometry(0.08, 0.07, 0.16);
+  const podLensMat = new THREE.MeshStandardMaterial({
+    color: 0xffffff,
+    emissive: 0xffffff,
+    emissiveIntensity: 1.5,
+  });
+  [-0.48, -0.24, 0, 0.24, 0.48].forEach((zOff) => {
+    const pod = new THREE.Mesh(podGeo, podLensMat);
+    pod.position.set(0.16, 1.38, zOff);
+    chassisGroup.add(pod);
   });
 
-  // Cockpit Bucket Seat & Steering Wheel
+  // Cockpit Bucket Seat & Driver Figure with Helmet
   const seatGeo = new THREE.BoxGeometry(0.5, 0.65, 0.5);
   const seatMesh = new THREE.Mesh(seatGeo, rollCageMat);
   seatMesh.position.set(-0.25, 0.65, 0);
   chassisGroup.add(seatMesh);
+
+  // Driver Helmet & Visor
+  const helmetMat = new THREE.MeshStandardMaterial({
+    color: 0xf8fafc,
+    metalness: 0.35,
+    roughness: 0.2,
+  });
+  const helmetGeo = new THREE.SphereGeometry(0.17, 12, 10);
+  const helmet = new THREE.Mesh(helmetGeo, helmetMat);
+  helmet.position.set(-0.16, 1.05, 0);
+  chassisGroup.add(helmet);
+
+  const visorMat = new THREE.MeshStandardMaterial({
+    color: 0x090d16,
+    metalness: 0.95,
+    roughness: 0.05,
+  });
+  const visorGeo = new THREE.BoxGeometry(0.13, 0.08, 0.22);
+  const visor = new THREE.Mesh(visorGeo, visorMat);
+  visor.position.set(-0.08, 1.05, 0);
+  chassisGroup.add(visor);
 
   const wheelGeo = new THREE.TorusGeometry(0.14, 0.03, 6, 12);
   const steeringWheel = new THREE.Mesh(wheelGeo, vibrantLimeMat);
@@ -274,6 +362,21 @@ export function createVehicle3D(): VehicleMeshRig {
     pipe.position.set(-CHASSIS_LENGTH / 2 - 0.12, 0.25, zOffset);
     chassisGroup.add(pipe);
     exhaustPipes.push(pipe);
+  });
+
+  // Heavy-Duty Rally Mud Flaps behind Rear Wheels
+  const mudflapMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.95 });
+  const mudflapTrimMat = new THREE.MeshStandardMaterial({ color: 0x8BCB3D, roughness: 0.35 });
+  const mudflapGeo = new THREE.BoxGeometry(0.04, 0.36, 0.30);
+  [-0.92, 0.92].forEach((zOffset) => {
+    const flap = new THREE.Mesh(mudflapGeo, mudflapMat);
+    flap.position.set(-CHASSIS_LENGTH / 2 - 0.04, 0.12, zOffset);
+    flap.rotation.z = 0.08;
+    chassisGroup.add(flap);
+
+    const trim = new THREE.Mesh(new THREE.BoxGeometry(0.045, 0.06, 0.30), mudflapTrimMat);
+    trim.position.set(-CHASSIS_LENGTH / 2 - 0.04, -0.03, zOffset);
+    chassisGroup.add(trim);
   });
 
   // ==========================================
@@ -373,7 +476,7 @@ export function createVehicle3D(): VehicleMeshRig {
 }
 
 /**
- * Creates 3D Knobby Off-Road Wheel with rim, center cap, and tire lugs
+ * Creates 3D Knobby Off-Road Wheel with vented brake disc, red caliper, sculpted 5-spoke alloy rim, and tread lugs
  */
 function createOffRoadWheel(
   tireMat: THREE.Material,
@@ -382,16 +485,16 @@ function createOffRoadWheel(
 ): THREE.Group {
   const wheelGroup = new THREE.Group();
 
-  // Main Tire Cylinder (oriented along Z-axis)
-  const tireGeo = new THREE.CylinderGeometry(WHEEL_RADIUS, WHEEL_RADIUS, WHEEL_WIDTH, 16);
+  // 1. Main Tire Cylinder (oriented along Z-axis)
+  const tireGeo = new THREE.CylinderGeometry(WHEEL_RADIUS, WHEEL_RADIUS, WHEEL_WIDTH, 18);
   tireGeo.rotateX(Math.PI / 2);
   const tireMesh = new THREE.Mesh(tireGeo, tireMat);
   tireMesh.castShadow = true;
   wheelGroup.add(tireMesh);
 
-  // Knobby Tire Tread Lugs
-  const lugGeo = new THREE.BoxGeometry(0.18, 0.1, WHEEL_WIDTH - 0.04);
-  const numLugs = 10;
+  // 2. Aggressive Knobby Tire Tread Lugs (14 alternating blocks)
+  const lugGeo = new THREE.BoxGeometry(0.16, 0.08, WHEEL_WIDTH - 0.04);
+  const numLugs = 14;
   for (let i = 0; i < numLugs; i++) {
     const angle = (i / numLugs) * Math.PI * 2;
     const lug = new THREE.Mesh(lugGeo, tireMat);
@@ -405,15 +508,47 @@ function createOffRoadWheel(
     wheelGroup.add(lug);
   }
 
-  // Alloy Rim
-  const rimGeo = new THREE.CylinderGeometry(0.42, 0.42, WHEEL_WIDTH + 0.02, 12);
+  // 3. Vented Steel Brake Rotor Disc
+  const brakeMat = new THREE.MeshStandardMaterial({
+    color: 0x94a3b8,
+    metalness: 0.9,
+    roughness: 0.25,
+  });
+  const discGeo = new THREE.CylinderGeometry(0.36, 0.36, 0.04, 16);
+  discGeo.rotateX(Math.PI / 2);
+  const discMesh = new THREE.Mesh(discGeo, brakeMat);
+  wheelGroup.add(discMesh);
+
+  // 4. Red Racing Brake Caliper
+  const caliperMat = new THREE.MeshStandardMaterial({
+    color: 0xdc2626,
+    metalness: 0.6,
+    roughness: 0.3,
+  });
+  const caliperGeo = new THREE.BoxGeometry(0.12, 0.20, 0.08);
+  const caliper = new THREE.Mesh(caliperGeo, caliperMat);
+  caliper.position.set(0.20, 0.16, 0);
+  wheelGroup.add(caliper);
+
+  // 5. Outer Alloy Rim Barrel
+  const rimGeo = new THREE.CylinderGeometry(0.42, 0.42, WHEEL_WIDTH + 0.02, 16);
   rimGeo.rotateX(Math.PI / 2);
   const rimMesh = new THREE.Mesh(rimGeo, rimMat);
   rimMesh.castShadow = true;
   wheelGroup.add(rimMesh);
 
-  // Center Hub Cap (Vibrant Lime Accent)
-  const hubGeo = new THREE.CylinderGeometry(0.18, 0.18, WHEEL_WIDTH + 0.06, 8);
+  // 6. 5-Spoke Alloy Wheel Star Pattern
+  const spokeGeo = new THREE.BoxGeometry(0.07, 0.24, 0.05);
+  for (let s = 0; s < 5; s++) {
+    const spokeAngle = (s / 5) * Math.PI * 2;
+    const spoke = new THREE.Mesh(spokeGeo, rimMat);
+    spoke.position.set(Math.cos(spokeAngle) * 0.22, Math.sin(spokeAngle) * 0.22, WHEEL_WIDTH / 2 - 0.02);
+    spoke.rotation.z = spokeAngle - Math.PI / 2;
+    wheelGroup.add(spoke);
+  }
+
+  // 7. Center Hub Cap (Vibrant Lime Accent with Silver Lug Nuts)
+  const hubGeo = new THREE.CylinderGeometry(0.16, 0.16, WHEEL_WIDTH + 0.06, 10);
   hubGeo.rotateX(Math.PI / 2);
   const hubMesh = new THREE.Mesh(hubGeo, accentMat);
   wheelGroup.add(hubMesh);
@@ -499,6 +634,15 @@ export function updateVehicleMeshTransform(
   rig.wheels.frontLeft.rotation.z = wheelRotation;
   rig.wheels.frontRight.rotation.z = wheelRotation;
 
-  // 5. Shadow contact follows ground elevation beneath vehicle
+  // 5. Dynamic Ground Contact Shadow (Softens & expands when airborne)
+  const avgComp = (cFL + cFR + cRL + cRR) / 4;
+  const droopAmount = Math.max(0, 0.28 - avgComp);
+  rig.shadowMesh.scale.set(1.0 + droopAmount * 0.75, 1.0 + droopAmount * 0.75, 1.0);
+  if (rig.shadowMesh.material && 'opacity' in rig.shadowMesh.material) {
+    (rig.shadowMesh.material as THREE.Material & { opacity: number }).opacity = Math.max(
+      0.18,
+      0.75 - droopAmount * 1.4
+    );
+  }
   rig.shadowMesh.position.y = -0.58;
 }

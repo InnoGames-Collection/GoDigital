@@ -195,6 +195,60 @@ export const HillRiderGame: React.FC<HillRiderGameProps> = ({
   const countdownIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const lastTimeRef = useRef<number>(performance.now());
   const dirLightRef = useRef<THREE.DirectionalLight | null>(null);
+  const skyDomeRef = useRef<THREE.Mesh | null>(null);
+  const cloudsRef = useRef<THREE.Group | null>(null);
+  const particleGroupRef = useRef<THREE.Group | null>(null);
+  const particlesRef = useRef<
+    Array<{
+      mesh: THREE.Mesh;
+      active: boolean;
+      life: number;
+      maxLife: number;
+      vx: number;
+      vy: number;
+      vz: number;
+      growth: number;
+      initialScale: number;
+    }>
+  >([]);
+
+  // Fast zero-allocation particle emitter
+  const emitParticle = useCallback(
+    (
+      x: number,
+      y: number,
+      z: number,
+      vx: number,
+      vy: number,
+      vz: number,
+      colorHex: number,
+      initialScale: number,
+      maxLife: number,
+      growth: number
+    ) => {
+      const pool = particlesRef.current;
+      if (pool.length === 0) return;
+      let p = pool.find((item) => !item.active);
+      if (!p) {
+        p = pool[0];
+      }
+      p.active = true;
+      p.life = 0;
+      p.maxLife = maxLife;
+      p.vx = vx;
+      p.vy = vy;
+      p.vz = vz;
+      p.growth = growth;
+      p.initialScale = initialScale;
+
+      p.mesh.position.set(x, y, z);
+      p.mesh.scale.set(initialScale, initialScale, initialScale);
+      (p.mesh.material as THREE.MeshStandardMaterial).color.setHex(colorHex);
+      (p.mesh.material as THREE.MeshStandardMaterial).opacity = 0.7;
+      p.mesh.visible = true;
+    },
+    []
+  );
 
   // Save persistent data
   const saveUserData = useCallback((newStats: Partial<HillRiderStorage>) => {
@@ -435,6 +489,12 @@ export const HillRiderGame: React.FC<HillRiderGameProps> = ({
       );
     }
 
+    // Reset all active particles
+    particlesRef.current.forEach((p) => {
+      p.active = false;
+      p.mesh.visible = false;
+    });
+
     // 5. Reset Camera Position with complete vehicle framing
     if (cameraRef.current) {
       const p = physicsStateRef.current;
@@ -442,6 +502,8 @@ export const HillRiderGame: React.FC<HillRiderGameProps> = ({
       const camHeightAbove = 3.8;
       const camSideOffset = 10.5;
       cameraRef.current.position.set(p.x - camDistBehind, p.y + camHeightAbove, p.z + camSideOffset);
+      cameraRef.current.fov = 52;
+      cameraRef.current.updateProjectionMatrix();
       cameraRef.current.lookAt(p.x + 5.5, p.y + 0.8, 0);
     }
   }, [loadChunk, unloadChunk]);
@@ -578,9 +640,57 @@ export const HillRiderGame: React.FC<HillRiderGameProps> = ({
     const scene = new THREE.Scene();
     sceneRef.current = scene;
 
-    // Clean Highland Ethiopian Sky & Atmospheric Fog
-    scene.background = new THREE.Color(0xa0c4e2);
-    scene.fog = new THREE.FogExp2(0xa0c4e2, 0.0075);
+    // 1. Stylized Sunny Sky Dome with Vertical Color Gradient
+    const skyCanvas = document.createElement('canvas');
+    skyCanvas.width = 16;
+    skyCanvas.height = 256;
+    const skyCtx = skyCanvas.getContext('2d');
+    if (skyCtx) {
+      const grad = skyCtx.createLinearGradient(0, 0, 0, 256);
+      grad.addColorStop(0.0, '#1c5280'); // Deep Rich Azure Blue Zenith
+      grad.addColorStop(0.48, '#4f94c8'); // Vibrant Mid-Sky Cyan Blue
+      grad.addColorStop(0.80, '#bfe2f7'); // Atmospheric Horizon Mist
+      grad.addColorStop(1.0, '#fed7aa'); // Warm Sun Glow Horizon
+      skyCtx.fillStyle = grad;
+      skyCtx.fillRect(0, 0, 16, 256);
+    }
+    const skyTex = new THREE.CanvasTexture(skyCanvas);
+    const skyGeo = new THREE.SphereGeometry(450, 24, 16);
+    const skyMat = new THREE.MeshBasicMaterial({
+      map: skyTex,
+      side: THREE.BackSide,
+      depthWrite: false,
+    });
+    const skyDome = new THREE.Mesh(skyGeo, skyMat);
+    scene.add(skyDome);
+    skyDomeRef.current = skyDome;
+
+    // Atmospheric Fog matched to horizon mist
+    scene.fog = new THREE.FogExp2(0xcfe2f3, 0.0055);
+
+    // 3D Fluffy Low-Poly Clouds in Background
+    const cloudMat = new THREE.MeshStandardMaterial({
+      color: 0xffffff,
+      roughness: 0.95,
+      flatShading: true,
+      transparent: true,
+      opacity: 0.90,
+    });
+    const cloudGroup = new THREE.Group();
+    for (let c = 0; c < 16; c++) {
+      const cloud = new THREE.Group();
+      const numPuffs = 3 + (c % 3);
+      for (let p = 0; p < numPuffs; p++) {
+        const puffGeo = new THREE.DodecahedronGeometry(6.0 + (p % 3) * 2.5, 0);
+        const puff = new THREE.Mesh(puffGeo, cloudMat);
+        puff.position.set(p * 6.5 - numPuffs * 3.0, (p % 2) * 2.0, (p % 3) * 2.2);
+        cloud.add(puff);
+      }
+      cloud.position.set(c * 100 - 250, 60 + (c % 4) * 8, (c % 2 === 0 ? 1 : -1) * (70 + (c % 3) * 20));
+      cloudGroup.add(cloud);
+    }
+    scene.add(cloudGroup);
+    cloudsRef.current = cloudGroup;
 
     // Camera (Third-Person Chase Perspective)
     const camera = new THREE.PerspectiveCamera(
@@ -597,7 +707,7 @@ export const HillRiderGame: React.FC<HillRiderGameProps> = ({
     camera.lookAt(initP.x + 5.5, initP.y + 0.8, 0);
     cameraRef.current = camera;
 
-    // WebGL Renderer with Shadow Maps & Antialiasing
+    // WebGL Renderer with Filmic Tonemapping & Soft Shadow Maps
     const renderer = new THREE.WebGLRenderer({
       antialias: true,
       powerPreference: 'high-performance',
@@ -607,18 +717,20 @@ export const HillRiderGame: React.FC<HillRiderGameProps> = ({
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.16;
     rendererRef.current = renderer;
 
     container.replaceChildren(renderer.domElement);
 
     // ==========================================
-    // LIGHTING & AMBIENCE
+    // LIGHTING & AMBIENCE (Warm Sun + Soft Sky Bounce)
     // ==========================================
-    const hemiLight = new THREE.HemisphereLight(0xe0f2fe, 0x4a3b32, 0.95);
+    const hemiLight = new THREE.HemisphereLight(0xe0f2fe, 0x5a4638, 0.95);
     hemiLight.position.set(0, 50, 0);
     scene.add(hemiLight);
 
-    const dirLight = new THREE.DirectionalLight(0xfffbeb, 1.45);
+    const dirLight = new THREE.DirectionalLight(0xfff8ea, 1.55);
     dirLight.position.set(25, 45, 30);
     dirLight.castShadow = true;
     dirLight.shadow.mapSize.width = 1024;
@@ -629,11 +741,11 @@ export const HillRiderGame: React.FC<HillRiderGameProps> = ({
     dirLight.shadow.camera.right = 30;
     dirLight.shadow.camera.top = 30;
     dirLight.shadow.camera.bottom = -30;
-    dirLight.shadow.bias = -0.0005;
+    dirLight.shadow.bias = -0.0004;
     scene.add(dirLight);
     dirLightRef.current = dirLight;
 
-    const ambLight = new THREE.AmbientLight(0xffffff, 0.45);
+    const ambLight = new THREE.AmbientLight(0xffffff, 0.40);
     scene.add(ambLight);
 
     // Subterranean Bedrock Horizon Foundation (Prevents any sky/void below terrain)
@@ -649,6 +761,52 @@ export const HillRiderGame: React.FC<HillRiderGameProps> = ({
     baseBedrockMesh.position.set(4000, -125, 0);
     baseBedrockMesh.receiveShadow = true;
     scene.add(baseBedrockMesh);
+
+    // ==========================================
+    // ZERO-ALLOCATION PARTICLE SYSTEM POOL
+    // ==========================================
+    const particleGroup = new THREE.Group();
+    scene.add(particleGroup);
+    particleGroupRef.current = particleGroup;
+
+    const pGeo = new THREE.DodecahedronGeometry(0.24, 0);
+    const pool: Array<{
+      mesh: THREE.Mesh;
+      active: boolean;
+      life: number;
+      maxLife: number;
+      vx: number;
+      vy: number;
+      vz: number;
+      growth: number;
+      initialScale: number;
+    }> = [];
+
+    for (let i = 0; i < 36; i++) {
+      const pMat = new THREE.MeshStandardMaterial({
+        color: 0xd6d3d1,
+        transparent: true,
+        opacity: 0.7,
+        roughness: 0.92,
+        flatShading: true,
+        depthWrite: false,
+      });
+      const mesh = new THREE.Mesh(pGeo, pMat);
+      mesh.visible = false;
+      particleGroup.add(mesh);
+      pool.push({
+        mesh,
+        active: false,
+        life: 0,
+        maxLife: 0.5,
+        vx: 0,
+        vy: 0,
+        vz: 0,
+        growth: 1.0,
+        initialScale: 1.0,
+      });
+    }
+    particlesRef.current = pool;
 
     // ==========================================
     // 3D VEHICLE RIG
@@ -681,6 +839,10 @@ export const HillRiderGame: React.FC<HillRiderGameProps> = ({
         cancelAnimationFrame(animationFrameIdRef.current);
       }
       renderer.dispose();
+      skyGeo.dispose();
+      skyMat.dispose();
+      skyTex.dispose();
+      pGeo.dispose();
       container.replaceChildren();
     };
   }, [resetRun]);
@@ -724,9 +886,60 @@ export const HillRiderGame: React.FC<HillRiderGameProps> = ({
           isGrounded: physics.isGrounded,
         });
 
-        // Dynamic Suspension Landing Impact Thud
-        if (result.landedThisFrame && result.impactSpeed > 3.2) {
+        // Dynamic Suspension Landing Impact Thud & Particle Dust Ring
+        if (result.landedThisFrame && result.impactSpeed > 2.8) {
           HillRiderAudio.playLandingThud(Math.min(2.5, result.impactSpeed / 3.8));
+
+          // Radial dust burst on landing
+          for (let k = 0; k < 6; k++) {
+            const ang = (k / 6) * Math.PI * 2;
+            emitParticle(
+              physics.x,
+              physics.y - 0.45,
+              0,
+              Math.cos(ang) * 2.6,
+              0.8 + Math.random() * 0.4,
+              Math.sin(ang) * 2.6,
+              0xd1d5db,
+              0.28,
+              0.5,
+              2.2
+            );
+          }
+        }
+
+        // Exhaust Smoke puffs (when gas is held)
+        if (controlsRef.current.gas && Math.random() < 0.45) {
+          const side = Math.random() > 0.5 ? 0.3 : -0.3;
+          emitParticle(
+            physics.x - 2.0,
+            physics.y + 0.25,
+            side,
+            -Math.abs(physics.vx) * 0.35 - 1.8,
+            0.8 + Math.random() * 0.5,
+            (Math.random() - 0.5) * 0.4,
+            0x94a3b8,
+            0.22,
+            0.55,
+            1.8
+          );
+        }
+
+        // Wheel Dirt Spray (when grounded and moving forward)
+        if (physics.isGrounded && Math.abs(physics.vx) > 3.5 && Math.random() < 0.40) {
+          const zWheel = (Math.random() > 0.5 ? 1 : -1) * 1.1;
+          emitParticle(
+            physics.x - 1.25,
+            physics.y - 0.45,
+            zWheel,
+            -physics.vx * 0.35,
+            1.1 + Math.random() * 0.8,
+            (Math.random() - 0.5) * 0.8,
+            0x78563e,
+            0.18,
+            0.42,
+            1.2
+          );
         }
 
         // Collectibles Audio (Coins & Fuel)
@@ -870,7 +1083,7 @@ export const HillRiderGame: React.FC<HillRiderGameProps> = ({
         );
       }
 
-      // 3. UPDATE ROTATION ON ACTIVE COLLECTIBLES
+      // 3. UPDATE ROTATION ON ACTIVE COLLECTIBLES & ADVANCE PARTICLE SYSTEM
       const spinAngle = currentTime * 0.003;
       collectibleMeshesRef.current.forEach((mesh) => {
         if (mesh.visible) {
@@ -878,9 +1091,34 @@ export const HillRiderGame: React.FC<HillRiderGameProps> = ({
         }
       });
 
+      // Update Active Particles (Zero-allocation animation loop)
+      particlesRef.current.forEach((p) => {
+        if (!p.active) return;
+        p.life += dt;
+        if (p.life >= p.maxLife) {
+          p.active = false;
+          p.mesh.visible = false;
+        } else {
+          p.mesh.position.x += p.vx * dt;
+          p.mesh.position.y += p.vy * dt;
+          p.mesh.position.z += p.vz * dt;
+          const prog = p.life / p.maxLife;
+          const s = p.initialScale + p.growth * p.life;
+          p.mesh.scale.set(s, s, s);
+          (p.mesh.material as THREE.MeshStandardMaterial).opacity = (1 - prog) * 0.65;
+        }
+      });
+
       // 4. THIRD-PERSON CHASE CAMERA SMOOTH FOLLOW (Framing full vehicle & road ahead)
       if (camera) {
-        const camDistBehind = 8.8;
+        const speedKmh = Math.abs(physics.vx) * 3.6;
+
+        // Dynamic speed FOV: 52deg at stop -> 58deg at 80+ km/h
+        const targetFov = 52 + Math.min(6, (speedKmh / 75) * 6);
+        camera.fov += (targetFov - camera.fov) * 0.08;
+        camera.updateProjectionMatrix();
+
+        const camDistBehind = 8.8 + Math.min(1.8, (speedKmh / 75) * 1.8);
         const camHeightAbove = 3.8;
         const camSideOffset = 10.5;
 
@@ -888,15 +1126,27 @@ export const HillRiderGame: React.FC<HillRiderGameProps> = ({
         const targetCamY = physics.y + camHeightAbove;
         const targetCamZ = physics.z + camSideOffset;
 
-        // Smooth camera lerp
-        camera.position.x += (targetCamX - camera.position.x) * 0.14;
-        camera.position.y += (targetCamY - camera.position.y) * 0.14;
-        camera.position.z += (targetCamZ - camera.position.z) * 0.14;
+        const lerpX = 0.16;
+        const lerpY = physics.isAirborne ? 0.08 : 0.14;
+        const lerpZ = 0.14;
 
-        // Look forward along the asphalt road
-        const lookAheadX = physics.x + 5.5;
+        camera.position.x += (targetCamX - camera.position.x) * lerpX;
+        camera.position.y += (targetCamY - camera.position.y) * lerpY;
+        camera.position.z += (targetCamZ - camera.position.z) * lerpZ;
+
+        // Look forward along the asphalt road, anticipating upcoming slopes
+        const lookAheadDist = 6.0 + Math.min(3.5, (speedKmh / 60) * 3.5);
+        const lookAheadX = physics.x + lookAheadDist;
         const lookAheadY = getTerrainElevation(lookAheadX, 0) + 0.8;
         camera.lookAt(lookAheadX, lookAheadY, 0);
+
+        // Keep sky dome and clouds tracking along with the player position
+        if (skyDomeRef.current) {
+          skyDomeRef.current.position.set(physics.x, physics.y * 0.5, 0);
+        }
+        if (cloudsRef.current) {
+          cloudsRef.current.position.x = physics.x * 0.75; // subtle parallax
+        }
 
         // Keep directional sunlight centered around player
         if (dirLightRef.current) {

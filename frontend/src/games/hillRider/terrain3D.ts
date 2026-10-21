@@ -723,6 +723,58 @@ export function createTerrainMesh(startDistance: number, endDistance: number): T
   curbMesh.receiveShadow = true;
   group.add(curbMesh);
 
+  // -------------------------------------------------------------
+  // 4. REFLECTIVE ROADSIDE DELINEATOR POSTS & WILDFLOWER CLUMPS
+  // -------------------------------------------------------------
+  const postGeo = new THREE.CylinderGeometry(0.045, 0.05, 0.90, 8);
+  const postMat = new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.5 });
+  const reflectorMat = new THREE.MeshStandardMaterial({
+    color: 0xf59e0b,
+    emissive: 0xd97706,
+    emissiveIntensity: 0.8,
+  });
+  const reflectorGeo = new THREE.CylinderGeometry(0.048, 0.048, 0.16, 8);
+
+  const postSpacing = 30.0;
+  const startPostIdx = Math.ceil(startDistance / postSpacing);
+  const endPostIdx = Math.floor(endDistance / postSpacing);
+
+  for (let p = startPostIdx; p <= endPostIdx; p++) {
+    const postX = p * postSpacing;
+    if (postX <= 3) continue;
+
+    // Left and right shoulder posts
+    [-ROAD_HALF_WIDTH - 0.45, ROAD_HALF_WIDTH + 0.45].forEach((zOff) => {
+      const postY = getTerrainElevation(postX, zOff) + 0.45;
+      const post = new THREE.Mesh(postGeo, postMat);
+      post.position.set(postX, postY, zOff);
+      post.castShadow = true;
+      group.add(post);
+
+      const refl = new THREE.Mesh(reflectorGeo, reflectorMat);
+      refl.position.set(postX, postY + 0.28, zOff);
+      group.add(refl);
+    });
+
+    // Roadside wildflower/grass clumps
+    const flowerX = postX + 14;
+    if (flowerX < endDistance) {
+      const flowerZ = (p % 2 === 0 ? 1 : -1) * (ROAD_HALF_WIDTH + 0.9);
+      const flowerY = getTerrainElevation(flowerX, flowerZ);
+      const flowerColor = p % 3 === 0 ? 0xfacc15 : p % 3 === 1 ? 0xc084fc : 0x38bdf8;
+      const flowerMat = new THREE.MeshStandardMaterial({
+        color: flowerColor,
+        roughness: 0.8,
+        flatShading: true,
+      });
+      const clumpGeo = new THREE.DodecahedronGeometry(0.24, 0);
+      const clump = new THREE.Mesh(clumpGeo, flowerMat);
+      clump.position.set(flowerX, flowerY + 0.15, flowerZ);
+      clump.scale.set(1.4, 0.7, 1.2);
+      group.add(clump);
+    }
+  }
+
   return group;
 }
 
@@ -1233,26 +1285,42 @@ export function createCoinMesh(): THREE.Group {
 
   const goldMat = new THREE.MeshStandardMaterial({
     color: 0xf59e0b,
-    metalness: 0.9,
-    roughness: 0.2,
+    metalness: 0.95,
+    roughness: 0.15,
     emissive: 0xd97706,
-    emissiveIntensity: 0.35,
+    emissiveIntensity: 0.40,
   });
 
-  const coinGeo = new THREE.CylinderGeometry(0.68, 0.68, 0.16, 16);
+  const coinGeo = new THREE.CylinderGeometry(0.70, 0.70, 0.18, 20);
   coinGeo.rotateX(Math.PI / 2);
   const coinMesh = new THREE.Mesh(coinGeo, goldMat);
   coinMesh.castShadow = true;
   group.add(coinMesh);
 
-  const rimGeo = new THREE.TorusGeometry(0.68, 0.07, 8, 16);
+  // Outer beveled milled rim
+  const rimGeo = new THREE.TorusGeometry(0.70, 0.08, 8, 20);
   const rimMat = new THREE.MeshStandardMaterial({
     color: 0xfbbf24,
-    metalness: 0.95,
-    roughness: 0.15,
+    metalness: 0.98,
+    roughness: 0.12,
+    emissive: 0xb45309,
+    emissiveIntensity: 0.35,
   });
   const rimMesh = new THREE.Mesh(rimGeo, rimMat);
   group.add(rimMesh);
+
+  // Inner star relief detail
+  const starMat = new THREE.MeshStandardMaterial({
+    color: 0xffedd5,
+    metalness: 0.9,
+    roughness: 0.2,
+  });
+  const starGeo = new THREE.BoxGeometry(0.36, 0.36, 0.22);
+  const star1 = new THREE.Mesh(starGeo, starMat);
+  star1.rotation.z = Math.PI / 4;
+  group.add(star1);
+  const star2 = new THREE.Mesh(starGeo, starMat);
+  group.add(star2);
 
   return group;
 }
@@ -1264,30 +1332,46 @@ export function createFuelMesh(): THREE.Group {
   const group = new THREE.Group();
 
   const redMat = new THREE.MeshStandardMaterial({
-    color: 0xef4444,
-    metalness: 0.5,
-    roughness: 0.35,
+    color: 0xdc2626,
+    metalness: 0.6,
+    roughness: 0.25,
   });
 
-  const capMat = new THREE.MeshStandardMaterial({
+  const yellowBadgeMat = new THREE.MeshStandardMaterial({
     color: 0xfacc15,
     metalness: 0.8,
     roughness: 0.2,
+    emissive: 0xca8a04,
+    emissiveIntensity: 0.5,
   });
 
-  const canGeo = new THREE.BoxGeometry(0.72, 1.05, 0.52);
+  // Stamped Jerrycan Body
+  const canGeo = new THREE.BoxGeometry(0.74, 1.08, 0.54);
   const canMesh = new THREE.Mesh(canGeo, redMat);
   canMesh.castShadow = true;
   group.add(canMesh);
 
-  const handleGeo = new THREE.BoxGeometry(0.38, 0.12, 0.14);
-  const handleMesh = new THREE.Mesh(handleGeo, redMat);
-  handleMesh.position.set(0, 0.62, 0);
-  group.add(handleMesh);
+  // Stamped Reinforcement Side Ribs
+  const braceMat = new THREE.MeshStandardMaterial({ color: 0xb91c1c, roughness: 0.4 });
+  const braceGeo = new THREE.BoxGeometry(0.68, 0.08, 0.56);
+  const brace1 = new THREE.Mesh(braceGeo, braceMat);
+  brace1.rotation.y = 0.5;
+  group.add(brace1);
+  const brace2 = new THREE.Mesh(braceGeo, braceMat);
+  brace2.rotation.y = -0.5;
+  group.add(brace2);
 
-  const capGeo = new THREE.CylinderGeometry(0.12, 0.12, 0.18, 8);
-  const capMesh = new THREE.Mesh(capGeo, capMat);
-  capMesh.position.set(0.2, 0.62, 0);
+  // Triple-Bar Heavy-Duty Handle
+  const handleGeo = new THREE.CylinderGeometry(0.045, 0.045, 0.42, 8);
+  handleGeo.rotateZ(Math.PI / 2);
+  const handle = new THREE.Mesh(handleGeo, redMat);
+  handle.position.set(0, 0.62, 0);
+  group.add(handle);
+
+  // Brass Screw Cap with Retaining Chain
+  const capGeo = new THREE.CylinderGeometry(0.12, 0.12, 0.20, 10);
+  const capMesh = new THREE.Mesh(capGeo, yellowBadgeMat);
+  capMesh.position.set(0.22, 0.62, 0);
   group.add(capMesh);
 
   return group;
