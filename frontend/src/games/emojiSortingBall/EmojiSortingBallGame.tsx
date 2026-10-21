@@ -842,27 +842,27 @@ export const EmojiSortingBallGame: React.FC<EmojiSortingBallGameProps> = ({
          =================================================================== */}
       {gameState === 'PLAYING' && (
         <header
-          className="w-full h-14 sm:h-16 flex items-center justify-between px-2 sm:px-6 border-b border-[#D4C3AA] z-30 shrink-0 shadow-xs"
+          className="w-full h-13 sm:h-16 flex items-center justify-between px-1 min-[360px]:px-2 sm:px-4 border-b border-[#D4C3AA] z-30 shrink-0 shadow-xs flex-nowrap"
           style={{ backgroundColor: '#F3E9D8' }}
         >
           {/* Left: Primary controls (1. Back, 2. Time, 3. Sound) */}
-          <div className="flex items-center gap-1.5 sm:gap-2.5">
+          <div className="flex items-center gap-0.5 min-[360px]:gap-1 sm:gap-2 flex-nowrap shrink-0">
             {/* 1. Back */}
             <button
               onClick={() => {
                 emojiSortingAudio.playButton();
                 setGameState('MENU');
               }}
-              className="px-2 py-1 sm:px-3 sm:py-1.5 rounded-lg sm:rounded-xl bg-[#E6D8C3] hover:bg-[#d8c8b0] active:scale-95 text-[#40372F] flex items-center gap-1 sm:gap-1.5 transition-all cursor-pointer border border-[#D4C3AA] shadow-xs text-xs font-bold"
+              className="px-1.5 py-1 min-[360px]:px-2 min-[360px]:py-1 sm:px-2.5 sm:py-1.5 rounded-lg bg-[#E6D8C3] hover:bg-[#d8c8b0] active:scale-95 text-[#40372F] flex items-center gap-1 transition-all cursor-pointer border border-[#D4C3AA] shadow-xs text-xs font-bold"
               title="Return to Menu"
               aria-label="Back to Menu"
             >
-              <ArrowLeft className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#40372F]" />
-              <span className="font-bold uppercase tracking-wider">Back</span>
+              <ArrowLeft className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#40372F] shrink-0" />
+              <span className="font-bold uppercase tracking-wider text-[11px] sm:text-xs hidden min-[360px]:inline">Back</span>
             </button>
 
             {/* 2. Time */}
-            <div className="flex items-center gap-1 sm:gap-1.5 px-2 py-1 sm:px-3 sm:py-1.5 rounded-lg sm:rounded-xl bg-[#E6D8C3] border border-[#D4C3AA] text-[#40372F] font-mono text-xs font-bold shadow-xs">
+            <div className="flex items-center gap-0.5 min-[360px]:gap-1 px-1.5 py-1 min-[360px]:px-2 sm:px-2.5 sm:py-1.5 rounded-lg bg-[#E6D8C3] border border-[#D4C3AA] text-[#40372F] font-mono text-[11px] sm:text-xs font-bold shadow-xs">
               <Clock className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-[#786B5B] shrink-0" />
               <span>{formatTime(elapsedSeconds)}</span>
             </div>
@@ -870,7 +870,7 @@ export const EmojiSortingBallGame: React.FC<EmojiSortingBallGameProps> = ({
             {/* 3. Sound */}
             <button
               onClick={() => setSoundActive(!soundActive)}
-              className="w-7.5 h-7.5 sm:w-8.5 sm:h-8.5 rounded-lg sm:rounded-xl bg-[#E6D8C3] hover:bg-[#d8c8b0] active:scale-95 text-[#40372F] flex items-center justify-center transition-all cursor-pointer border border-[#D4C3AA] shadow-xs"
+              className="w-7 h-7 sm:w-8.5 sm:h-8.5 rounded-lg bg-[#E6D8C3] hover:bg-[#d8c8b0] active:scale-95 text-[#40372F] flex items-center justify-center transition-all cursor-pointer border border-[#D4C3AA] shadow-xs shrink-0"
               aria-label="Toggle Sound"
               title="Toggle Sound"
             >
@@ -883,10 +883,10 @@ export const EmojiSortingBallGame: React.FC<EmojiSortingBallGameProps> = ({
           </div>
 
           {/* Right: Gameplay actions (4. Moves, 5. Undo, 6. Add Tube) */}
-          <div className="flex items-center gap-1.5 sm:gap-2.5">
+          <div className="flex items-center gap-0.5 min-[360px]:gap-1 sm:gap-2 flex-nowrap shrink-0">
             {/* 4. Moves */}
-            <div className="flex items-center gap-1 sm:gap-1.5 px-2 py-1 sm:px-3 sm:py-1.5 rounded-lg sm:rounded-xl bg-[#E6D8C3] border border-[#D4C3AA] text-[#40372F] font-mono text-xs font-bold shadow-xs">
-              <span className="text-[#786B5B] text-[10px] font-sans uppercase font-bold">Moves</span>
+            <div className="flex items-center gap-0.5 min-[360px]:gap-1 px-1.5 py-1 min-[360px]:px-2 sm:px-2.5 sm:py-1.5 rounded-lg bg-[#E6D8C3] border border-[#D4C3AA] text-[#40372F] font-mono text-[11px] sm:text-xs font-bold shadow-xs">
+              <span className="text-[#786B5B] text-[10px] font-sans uppercase font-bold hidden min-[370px]:inline">Moves</span>
               <span>{movesCount}</span>
             </div>
 
@@ -894,7 +894,7 @@ export const EmojiSortingBallGame: React.FC<EmojiSortingBallGameProps> = ({
             <button
               onClick={handleUndo}
               disabled={moveHistory.length === 0 || undosRemaining <= 0 || isAnimating}
-              className={`px-2 py-1 sm:px-3 sm:py-1.5 rounded-lg sm:rounded-xl bg-[#E6D8C3] hover:bg-[#d8c8b0] active:scale-95 text-[#40372F] flex items-center gap-1 sm:gap-1.5 text-xs font-bold transition-all border border-[#D4C3AA] shadow-xs cursor-pointer ${
+              className={`px-1.5 py-1 min-[360px]:px-2 sm:px-2.5 sm:py-1.5 rounded-lg bg-[#E6D8C3] hover:bg-[#d8c8b0] active:scale-95 text-[#40372F] flex items-center gap-0.5 min-[360px]:gap-1 text-[11px] sm:text-xs font-bold transition-all cursor-pointer border border-[#D4C3AA] shadow-xs ${
                 moveHistory.length === 0 || undosRemaining <= 0 || isAnimating
                   ? 'opacity-40 cursor-not-allowed'
                   : ''
@@ -902,9 +902,8 @@ export const EmojiSortingBallGame: React.FC<EmojiSortingBallGameProps> = ({
               aria-label="Undo Move"
               title={`Undo (${undosRemaining} left)`}
             >
-              <Undo2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#40372F] stroke-[2.2] shrink-0" />
-              <span className="hidden sm:inline">Undo</span>
-              <span className="text-[10px] font-mono bg-[#D4C3AA] text-[#40372F] px-1.5 py-0.2 rounded-full font-bold">
+              <Undo2 className="w-3.5 h-3.5 text-[#40372F] stroke-[2.2] shrink-0" />
+              <span className="text-[10px] font-mono bg-[#D4C3AA] text-[#40372F] px-1 rounded-full font-bold">
                 {undosRemaining}
               </span>
             </button>
@@ -913,7 +912,7 @@ export const EmojiSortingBallGame: React.FC<EmojiSortingBallGameProps> = ({
             <button
               onClick={handleAddExtraTube}
               disabled={extraTubesAdded >= 1 || extraTubeUsedRef.current || isAnimating}
-              className={`px-2 py-1 sm:px-3 sm:py-1.5 rounded-lg sm:rounded-xl flex items-center gap-1 sm:gap-1.5 text-xs font-bold transition-all border shadow-xs ${
+              className={`px-1.5 py-1 min-[360px]:px-2 sm:px-2.5 sm:py-1.5 rounded-lg flex items-center gap-0.5 min-[360px]:gap-1 text-[11px] sm:text-xs font-bold transition-all border shadow-xs ${
                 extraTubesAdded >= 1 || extraTubeUsedRef.current
                   ? 'opacity-40 cursor-not-allowed bg-[#E6D8C3] border-[#D4C3AA] text-[#786B5B]'
                   : 'bg-[#D58A36] hover:bg-[#c47b2c] active:scale-95 text-white border-[#b87024] cursor-pointer'
@@ -925,10 +924,10 @@ export const EmojiSortingBallGame: React.FC<EmojiSortingBallGameProps> = ({
                   : 'Add 1 Tube (-250 PTS)'
               }
             >
-              <Plus className="w-3.5 h-3.5 sm:w-4 sm:h-4 stroke-[2.5] shrink-0" />
+              <Plus className="w-3.5 h-3.5 stroke-[2.5] shrink-0" />
               <span>Tube</span>
               {(extraTubesAdded >= 1 || extraTubeUsedRef.current) && (
-                <span className="text-[9px] sm:text-[10px] font-mono opacity-80">(1/1)</span>
+                <span className="text-[9px] font-mono opacity-80">(1/1)</span>
               )}
             </button>
           </div>
