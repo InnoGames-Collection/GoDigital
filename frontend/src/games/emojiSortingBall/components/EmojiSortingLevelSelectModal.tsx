@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { Grid, X, Lock, Star, CheckCircle, Trophy, Flame } from 'lucide-react';
+import { Grid, X, Lock, Star, CheckCircle } from 'lucide-react';
 import { EmojiSortingPlayerProgress } from '../types';
-import { TOTAL_EMOJI_SORTING_LEVELS, EMOJI_SORTING_LEVELS } from '../levels';
+import { EMOJI_SORTING_LEVELS } from '../levels';
 
 interface EmojiSortingLevelSelectModalProps {
   isOpen: boolean;
@@ -41,30 +41,21 @@ export const EmojiSortingLevelSelectModal: React.FC<EmojiSortingLevelSelectModal
 
   return (
     <div
-      className="fixed inset-0 z-50 flex flex-col justify-start items-center p-4 sm:p-6 overflow-y-auto select-none font-['Plus_Jakarta_Sans',sans-serif] text-slate-800"
-      style={{
-        background: `
-          radial-gradient(circle at 18% 12%, #FFE8E8 0%, transparent 48%),
-          radial-gradient(circle at 82% 16%, #E8F6FF 0%, transparent 45%),
-          radial-gradient(circle at 50% 45%, #F7EFFF 0%, transparent 60%),
-          radial-gradient(circle at 15% 85%, #E7F9F3 0%, transparent 50%),
-          radial-gradient(circle at 85% 88%, #FFE8E8 0%, transparent 45%),
-          #FAF7FD
-        `,
-      }}
+      className="fixed inset-0 z-50 flex flex-col justify-start items-center p-4 sm:p-6 overflow-y-auto select-none font-['Plus_Jakarta_Sans',sans-serif]"
+      style={{ backgroundColor: '#F3E9D8', color: '#40372F' }}
     >
       <div className="w-full max-w-lg mx-auto space-y-4 pb-8 my-auto">
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-purple-100 pb-3">
+        <div className="flex items-center justify-between border-b border-[#D4C3AA] pb-3">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-violet-100 border border-violet-200 flex items-center justify-center text-violet-700 shadow-xs">
+            <div className="w-10 h-10 rounded-xl bg-[#E6D8C3] border border-[#D4C3AA] flex items-center justify-center text-[#D58A36]">
               <Grid className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="text-xl sm:text-2xl font-black text-slate-900 uppercase tracking-tight">
+              <h2 className="text-xl sm:text-2xl font-black text-[#40372F] uppercase tracking-tight">
                 SELECT LEVEL
               </h2>
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-[#786B5B]">
                 40 Progressive Championship Puzzles
               </p>
             </div>
@@ -72,7 +63,7 @@ export const EmojiSortingLevelSelectModal: React.FC<EmojiSortingLevelSelectModal
 
           <button
             onClick={onClose}
-            className="w-10 h-10 rounded-xl bg-white hover:bg-slate-50 active:scale-95 text-slate-600 flex items-center justify-center transition-colors cursor-pointer border border-purple-100 shadow-xs"
+            className="w-10 h-10 rounded-xl bg-[#E6D8C3] hover:bg-[#d8c8b0] active:scale-95 text-[#40372F] flex items-center justify-center transition-colors cursor-pointer border border-[#D4C3AA]"
             aria-label="Close Level Select"
           >
             <X className="w-5 h-5" />
@@ -80,15 +71,15 @@ export const EmojiSortingLevelSelectModal: React.FC<EmojiSortingLevelSelectModal
         </div>
 
         {/* Tier Selector Tabs */}
-        <div className="grid grid-cols-4 gap-1.5 p-1 rounded-xl bg-purple-50/80 border border-purple-100">
+        <div className="grid grid-cols-4 gap-1.5 p-1 rounded-xl bg-[#E6D8C3] border border-[#D4C3AA]">
           {tiers.map((t) => (
             <button
               key={t.id}
               onClick={() => setSelectedTier(t.id)}
               className={`py-2 px-1 rounded-lg text-center transition-all cursor-pointer ${
                 selectedTier === t.id
-                  ? 'bg-gradient-to-r from-violet-600 to-pink-600 text-white font-black shadow-sm'
-                  : 'text-slate-600 hover:text-slate-900 font-semibold'
+                  ? 'bg-[#D58A36] text-white font-black shadow-xs'
+                  : 'text-[#786B5B] hover:text-[#40372F] font-semibold'
               }`}
             >
               <div className="text-[11px] leading-none uppercase">
@@ -99,9 +90,9 @@ export const EmojiSortingLevelSelectModal: React.FC<EmojiSortingLevelSelectModal
         </div>
 
         {/* Tier Description */}
-        <div className="flex items-center justify-between px-1 text-xs text-slate-500">
-          <span className="font-semibold text-slate-700">{currentTierObj.name}</span>
-          <span className="text-violet-700 font-mono text-[11px] font-bold">{currentTierObj.desc}</span>
+        <div className="flex items-center justify-between px-1 text-xs text-[#786B5B]">
+          <span className="font-semibold text-[#40372F]">{currentTierObj.name}</span>
+          <span className="text-[#D58A36] font-mono text-[11px] font-bold">{currentTierObj.desc}</span>
         </div>
 
         {/* 10 Level Cards in Current Tier */}
@@ -119,68 +110,64 @@ export const EmojiSortingLevelSelectModal: React.FC<EmojiSortingLevelSelectModal
                 key={lvl}
                 disabled={!isUnlocked}
                 onClick={() => {
-                  onSelectLevel(lvl);
-                  onClose();
+                  if (isUnlocked) {
+                    onSelectLevel(lvl);
+                    onClose();
+                  }
                 }}
-                className={`p-3 rounded-xl border flex flex-col items-center justify-between min-h-[92px] transition-all text-left cursor-pointer shadow-xs ${
+                className={`p-3 rounded-2xl flex flex-col items-center justify-between min-h-[96px] transition-all cursor-pointer relative border ${
                   !isUnlocked
-                    ? 'bg-slate-100/60 border-slate-200 opacity-50 cursor-not-allowed'
+                    ? 'bg-[#E6D8C3]/40 border-[#D4C3AA]/40 opacity-45 cursor-not-allowed'
                     : isCurrent
-                    ? 'bg-violet-100 border-violet-400 shadow-sm scale-[1.02]'
+                    ? 'bg-[#E6D8C3] border-2 border-[#D58A36] ring-2 ring-[#D58A36]/30 shadow-md'
                     : isCompleted
-                    ? 'bg-emerald-50/90 border-emerald-200 hover:bg-emerald-100/80'
-                    : 'bg-white hover:bg-purple-50/60 border-purple-100 hover:border-violet-300'
+                    ? 'bg-[#E6D8C3] border-[#648B75]/50 hover:bg-[#dfd0bb]'
+                    : 'bg-[#E6D8C3] border-[#D4C3AA] hover:bg-[#dfd0bb]'
                 }`}
               >
+                {/* Top: Level Number & Lock / Completed Icon */}
                 <div className="w-full flex items-center justify-between">
-                  <span className="text-xs font-black tracking-wider text-slate-800">
-                    LVL {lvl}
+                  <span className="text-xs font-black font-mono text-[#40372F]">
+                    #{lvl}
                   </span>
                   {!isUnlocked ? (
-                    <Lock className="w-3.5 h-3.5 text-slate-400" />
+                    <Lock className="w-3.5 h-3.5 text-[#786B5B]" />
                   ) : isCompleted ? (
-                    <CheckCircle className="w-3.5 h-3.5 text-emerald-600 fill-emerald-100" />
+                    <CheckCircle className="w-3.5 h-3.5 text-[#648B75]" />
                   ) : (
-                    <Flame className="w-3.5 h-3.5 fill-amber-500 text-amber-500" />
+                    <span className="w-2 h-2 rounded-full bg-[#D58A36] animate-pulse" />
                   )}
                 </div>
 
-                <div className="text-center my-1">
-                  <span className="text-[10px] text-slate-500 line-clamp-1 block">
-                    {lvlConfig?.themeTitle || `${lvlConfig?.tubes?.length || 6} Tubes`}
-                  </span>
-                  {score > 0 && (
-                    <span className="text-[11px] font-bold text-amber-700 font-mono">
-                      {score.toLocaleString()} pts
-                    </span>
-                  )}
-                </div>
-
-                {/* Stars */}
-                <div className="flex items-center gap-0.5">
-                  {[1, 2, 3].map((starNum) => (
+                {/* Center: Stars */}
+                <div className="flex items-center gap-0.5 my-1">
+                  {[1, 2, 3].map((s) => (
                     <Star
-                      key={starNum}
+                      key={s}
                       className={`w-3 h-3 ${
-                        starNum <= stars
-                          ? 'text-amber-500 fill-amber-500'
-                          : 'text-slate-300'
+                        s <= stars
+                          ? 'text-[#D58A36] fill-[#D58A36]'
+                          : 'text-[#D4C3AA]'
                       }`}
                     />
                   ))}
                 </div>
+
+                {/* Bottom: Score or Par */}
+                <div className="text-[10px] font-mono text-[#786B5B] w-full text-center truncate">
+                  {score > 0 ? (
+                    <span className="text-[#D58A36] font-bold">
+                      {score} pts
+                    </span>
+                  ) : isUnlocked ? (
+                    <span className="text-[#786B5B]">Par {lvlConfig?.optimalMoves || 15}</span>
+                  ) : (
+                    <span className="text-[#786B5B]/60">Locked</span>
+                  )}
+                </div>
               </button>
             );
           })}
-        </div>
-
-        {/* Footer info */}
-        <div className="p-3 rounded-xl bg-white border border-purple-100 shadow-xs flex items-center justify-between text-xs text-slate-600">
-          <div className="flex items-center gap-2">
-            <Trophy className="w-4 h-4 text-amber-500" />
-            <span>Progress: {completedLevels.length} / {TOTAL_EMOJI_SORTING_LEVELS} Completed</span>
-          </div>
-          <span className="text-violet-700 font-bold">100% Solvable</span>
         </div>
       </div>
     </div>

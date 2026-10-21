@@ -120,6 +120,15 @@ export class EmojiSortingRenderer3D {
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = 1.30;
+
+    // Direct canvas styling to prevent container collapse or mispositioning
+    this.renderer.domElement.style.position = 'absolute';
+    this.renderer.domElement.style.top = '0';
+    this.renderer.domElement.style.left = '0';
+    this.renderer.domElement.style.width = '100%';
+    this.renderer.domElement.style.height = '100%';
+    this.renderer.domElement.style.display = 'block';
+
     this.container.appendChild(this.renderer.domElement);
 
     // 4. Lighting calibrated for bright playful puzzle atmosphere and vibrant emoji spheres
@@ -127,24 +136,24 @@ export class EmojiSortingRenderer3D {
 
     // 5. Environmental base materials (Crisp, clean, bright pearl platform & soft shadows)
     this.innerWallMaterial = new THREE.MeshBasicMaterial({
-      color: 0xffffff,
+      color: 0x40372f,
       transparent: true,
-      opacity: 0.0,
+      opacity: 0.05,
       side: THREE.BackSide,
       depthWrite: false,
     });
 
     this.contactShadowMaterial = new THREE.MeshBasicMaterial({
-      color: 0x475569,
+      color: 0x2b2118,
       transparent: true,
-      opacity: 0.14,
+      opacity: 0.40,
       depthWrite: false,
     });
 
     this.penumbraShadowMaterial = new THREE.MeshBasicMaterial({
-      color: 0x94a3b8,
+      color: 0x5a483a,
       transparent: true,
-      opacity: 0.07,
+      opacity: 0.20,
       depthWrite: false,
     });
 

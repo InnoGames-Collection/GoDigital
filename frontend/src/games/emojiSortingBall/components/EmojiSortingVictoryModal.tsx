@@ -1,5 +1,5 @@
 import React from 'react';
-import { Trophy, Star, ArrowRight, RotateCcw, Home, Award, Sparkles, Clock, Zap } from 'lucide-react';
+import { Trophy, Star, ArrowRight, RotateCcw, Home } from 'lucide-react';
 import { EmojiLevelScoreBreakdown } from '../types';
 
 interface EmojiSortingVictoryModalProps {
@@ -33,28 +33,19 @@ export const EmojiSortingVictoryModal: React.FC<EmojiSortingVictoryModalProps> =
 
   return (
     <div
-      className="fixed inset-0 z-50 flex flex-col justify-start items-center p-4 sm:p-6 overflow-y-auto select-none font-['Plus_Jakarta_Sans',sans-serif] text-slate-800"
-      style={{
-        background: `
-          radial-gradient(circle at 18% 12%, #FFE8E8 0%, transparent 48%),
-          radial-gradient(circle at 82% 16%, #E8F6FF 0%, transparent 45%),
-          radial-gradient(circle at 50% 45%, #F7EFFF 0%, transparent 60%),
-          radial-gradient(circle at 15% 85%, #E7F9F3 0%, transparent 50%),
-          radial-gradient(circle at 85% 88%, #FFE8E8 0%, transparent 45%),
-          #FAF7FD
-        `,
-      }}
+      className="fixed inset-0 z-50 flex flex-col justify-start items-center p-4 sm:p-6 overflow-y-auto select-none font-['Plus_Jakarta_Sans',sans-serif]"
+      style={{ backgroundColor: '#F3E9D8', color: '#40372F' }}
     >
       <div className="w-full max-w-md mx-auto space-y-4 pb-8 my-auto text-center">
-        {/* Confetti / Particle Trophy Aura */}
+        {/* Trophy Badge */}
         <div className="relative inline-flex items-center justify-center">
-          <div className="w-20 h-20 rounded-3xl bg-gradient-to-tr from-violet-500 via-pink-500 to-amber-400 p-0.5 shadow-lg shadow-purple-500/20 animate-bounce">
-            <div className="w-full h-full rounded-[22px] bg-white flex items-center justify-center text-amber-500">
+          <div className="w-20 h-20 rounded-3xl bg-[#E6D8C3] border-2 border-[#D58A36] p-1 shadow-md">
+            <div className="w-full h-full rounded-[20px] bg-[#F3E9D8] flex items-center justify-center text-[#D58A36]">
               <Trophy className="w-10 h-10" />
             </div>
           </div>
           {isNewBest && (
-            <span className="absolute -top-2 -right-4 px-2.5 py-0.5 rounded-full bg-emerald-500 text-white font-black text-[10px] uppercase tracking-wider shadow-md border border-white">
+            <span className="absolute -top-2 -right-4 px-2.5 py-0.5 rounded-full bg-[#648B75] text-white font-black text-[10px] uppercase tracking-wider shadow-sm border border-[#D4C3AA]">
               NEW BEST!
             </span>
           )}
@@ -62,10 +53,10 @@ export const EmojiSortingVictoryModal: React.FC<EmojiSortingVictoryModalProps> =
 
         {/* Title & Level */}
         <div>
-          <h2 className="text-2xl sm:text-3xl font-black text-slate-900 uppercase tracking-tight">
+          <h2 className="text-2xl sm:text-3xl font-black text-[#40372F] uppercase tracking-tight">
             LEVEL {level} COMPLETED!
           </h2>
-          <p className="text-xs text-slate-600 font-medium">
+          <p className="text-xs text-[#786B5B] font-medium">
             {isFinalLevel
               ? '🏆 Master Grandmaster — All 40 Emoji Levels Solved!'
               : 'Exceptional tactical execution.'}
@@ -79,13 +70,13 @@ export const EmojiSortingVictoryModal: React.FC<EmojiSortingVictoryModalProps> =
               key={star}
               className={`p-2 rounded-2xl border transition-all ${
                 star <= (scoreBreakdown.stars || 1)
-                  ? 'bg-amber-100 border-amber-300 text-amber-500 scale-110 shadow-sm'
-                  : 'bg-white/80 border-slate-200 text-slate-300'
+                  ? 'bg-[#E6D8C3] border-[#D58A36] text-[#D58A36] scale-110 shadow-xs'
+                  : 'bg-[#E6D8C3]/50 border-[#D4C3AA] text-[#D4C3AA]'
               }`}
             >
               <Star
                 className={`w-7 h-7 ${
-                  star <= (scoreBreakdown.stars || 1) ? 'fill-amber-400 text-amber-500' : ''
+                  star <= (scoreBreakdown.stars || 1) ? 'fill-[#D58A36]' : ''
                 }`}
               />
             </div>
@@ -93,71 +84,71 @@ export const EmojiSortingVictoryModal: React.FC<EmojiSortingVictoryModalProps> =
         </div>
 
         {/* Score Breakdown Card */}
-        <div className="p-4 rounded-2xl bg-white/90 border border-purple-100 shadow-md space-y-3 text-left">
-          <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
+        <div className="p-4 rounded-2xl bg-[#E6D8C3] border border-[#D4C3AA] space-y-3 text-left shadow-sm">
+          <div className="flex items-center justify-between border-b border-[#D4C3AA] pb-2">
+            <span className="text-xs font-bold uppercase tracking-wider text-[#786B5B]">
               Score Breakdown
             </span>
-            <span className="text-xs font-mono text-violet-700 font-bold">
+            <span className="text-xs font-mono text-[#40372F] font-bold">
               {scoreBreakdown.moves} Moves • {scoreBreakdown.timeTakenSeconds}s
             </span>
           </div>
 
           <div className="space-y-1.5 text-xs font-mono">
             {/* Base Points */}
-            <div className="flex justify-between text-slate-600">
+            <div className="flex justify-between text-[#40372F]">
               <span className="font-sans">Base Level Clearance</span>
-              <span className="text-slate-900 font-semibold">+{scoreBreakdown.basePoints}</span>
+              <span className="font-bold">+{scoreBreakdown.basePoints}</span>
             </div>
 
             {/* Move Par Bonus */}
-            <div className="flex justify-between text-slate-600">
+            <div className="flex justify-between text-[#40372F]">
               <span className="font-sans">
                 Move Efficiency Bonus (Par {scoreBreakdown.optimalParMoves})
               </span>
-              <span className="text-violet-700 font-semibold">+{scoreBreakdown.moveBonus || 0}</span>
+              <span className="text-[#648B75] font-bold">+{scoreBreakdown.moveBonus}</span>
             </div>
 
             {/* Speed Bonus */}
-            <div className="flex justify-between text-slate-600">
+            <div className="flex justify-between text-[#40372F]">
               <span className="font-sans">Time / Speed Bonus</span>
-              <span className="text-emerald-700 font-semibold">+{scoreBreakdown.timeBonus}</span>
+              <span className="text-[#648B75] font-bold">+{scoreBreakdown.timeBonus}</span>
             </div>
 
             {/* Penalties if any */}
-            {(scoreBreakdown.undoPenalty || 0) > 0 && (
-              <div className="flex justify-between text-rose-600">
+            {scoreBreakdown.undoPenalty > 0 && (
+              <div className="flex justify-between text-rose-700">
                 <span className="font-sans">Undo Penalty</span>
-                <span>-{scoreBreakdown.undoPenalty}</span>
+                <span className="font-bold">-{scoreBreakdown.undoPenalty}</span>
               </div>
             )}
-            {(scoreBreakdown.hintPenalty || 0) > 0 && (
-              <div className="flex justify-between text-rose-600">
+            {scoreBreakdown.hintPenalty > 0 && (
+              <div className="flex justify-between text-rose-700">
                 <span className="font-sans">Hint Penalty</span>
-                <span>-{scoreBreakdown.hintPenalty}</span>
+                <span className="font-bold">-{scoreBreakdown.hintPenalty}</span>
               </div>
             )}
-            {(scoreBreakdown.extraTubePenalty || 0) > 0 && (
-              <div className="flex justify-between text-rose-600">
+            {scoreBreakdown.extraTubePenalty > 0 && (
+              <div className="flex justify-between text-rose-700">
                 <span className="font-sans">Extra Buffer Tube Penalty</span>
-                <span>-{scoreBreakdown.extraTubePenalty}</span>
+                <span className="font-bold">-{scoreBreakdown.extraTubePenalty}</span>
               </div>
             )}
 
             {/* Total Level Score */}
-            <div className="pt-2 border-t border-slate-100 flex justify-between items-center text-sm font-bold">
-              <span className="text-slate-900 font-sans uppercase">Level Score</span>
-              <span className="text-amber-700 text-base font-black">
-                {(scoreBreakdown.totalScore || scoreBreakdown.finalLevelScore || 0).toLocaleString()} PTS
+            <div className="pt-2 border-t border-[#D4C3AA] flex justify-between items-center text-sm font-bold">
+              <span className="text-[#40372F] font-sans uppercase">Level Score</span>
+              <span className="text-[#D58A36] text-base font-black">
+                {scoreBreakdown.totalScore.toLocaleString()} PTS
               </span>
             </div>
 
             {/* Total Cumulative Score */}
             <div className="pt-1 flex justify-between items-center text-xs">
-              <span className="text-slate-500 font-sans uppercase">
+              <span className="text-[#786B5B] font-sans uppercase">
                 Total Tournament Score
               </span>
-              <span className="text-sky-700 font-bold">
+              <span className="text-[#40372F] font-bold">
                 {cumulativeTotalScore.toLocaleString()} PTS
               </span>
             </div>
@@ -169,7 +160,7 @@ export const EmojiSortingVictoryModal: React.FC<EmojiSortingVictoryModalProps> =
           {!isFinalLevel ? (
             <button
               onClick={onNextLevel}
-              className="w-full py-3.5 px-6 rounded-2xl bg-gradient-to-r from-violet-600 via-pink-600 to-amber-500 hover:from-violet-500 hover:to-amber-400 active:scale-[0.98] text-white font-black text-sm uppercase tracking-wider shadow-lg shadow-violet-500/20 border border-white/20 flex items-center justify-center gap-2 cursor-pointer"
+              className="w-full py-3.5 px-6 rounded-2xl bg-[#D58A36] hover:bg-[#c47b2c] active:scale-[0.98] text-white font-black text-sm uppercase tracking-wider shadow-md border border-[#b87024] flex items-center justify-center gap-2 cursor-pointer transition-all"
             >
               <span>NEXT LEVEL</span>
               <ArrowRight className="w-5 h-5" />
@@ -177,7 +168,7 @@ export const EmojiSortingVictoryModal: React.FC<EmojiSortingVictoryModalProps> =
           ) : (
             <button
               onClick={onOpenLeaderboard}
-              className="w-full py-3.5 px-6 rounded-2xl bg-gradient-to-r from-amber-500 to-yellow-400 text-black font-black text-sm uppercase tracking-wider shadow-lg flex items-center justify-center gap-2 cursor-pointer"
+              className="w-full py-3.5 px-6 rounded-2xl bg-[#D58A36] hover:bg-[#c47b2c] text-white font-black text-sm uppercase tracking-wider shadow-md border border-[#b87024] flex items-center justify-center gap-2 cursor-pointer transition-all"
             >
               <Trophy className="w-5 h-5" />
               <span>VIEW FINAL TOURNAMENT RANK</span>
@@ -187,17 +178,17 @@ export const EmojiSortingVictoryModal: React.FC<EmojiSortingVictoryModalProps> =
           <div className="grid grid-cols-2 gap-2">
             <button
               onClick={onReplay}
-              className="py-3 px-4 rounded-xl bg-white hover:bg-slate-50 active:scale-[0.98] text-slate-700 text-xs font-bold uppercase tracking-wider transition-all cursor-pointer border border-purple-100 shadow-xs flex items-center justify-center gap-2"
+              className="py-3 px-4 rounded-xl bg-[#E6D8C3] hover:bg-[#d8c8b0] active:scale-[0.98] text-[#40372F] text-xs font-bold uppercase tracking-wider transition-all cursor-pointer border border-[#D4C3AA] flex items-center justify-center gap-2 shadow-xs"
             >
-              <RotateCcw className="w-4 h-4 text-violet-600" />
+              <RotateCcw className="w-4 h-4 text-[#D58A36]" />
               <span>REPLAY</span>
             </button>
 
             <button
               onClick={onGoToMenu}
-              className="py-3 px-4 rounded-xl bg-white hover:bg-slate-50 active:scale-[0.98] text-slate-700 text-xs font-bold uppercase tracking-wider transition-all cursor-pointer border border-purple-100 shadow-xs flex items-center justify-center gap-2"
+              className="py-3 px-4 rounded-xl bg-[#E6D8C3] hover:bg-[#d8c8b0] active:scale-[0.98] text-[#40372F] text-xs font-bold uppercase tracking-wider transition-all cursor-pointer border border-[#D4C3AA] flex items-center justify-center gap-2 shadow-xs"
             >
-              <Home className="w-4 h-4 text-slate-500" />
+              <Home className="w-4 h-4 text-[#786B5B]" />
               <span>MAIN MENU</span>
             </button>
           </div>

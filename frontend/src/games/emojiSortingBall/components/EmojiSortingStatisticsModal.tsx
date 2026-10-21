@@ -20,121 +20,106 @@ export const EmojiSortingStatisticsModal: React.FC<EmojiSortingStatisticsModalPr
   const bestMoves = bestMovesValues.length > 0 ? Math.min(...bestMovesValues) : '--';
 
   const bestTimesValues = Object.values(progress.levelBestTimes || {}) as number[];
-  const bestTime = bestTimesValues.length > 0 ? `${Math.min(...bestTimesValues)}s` : '--';
+  const bestTime =
+    bestTimesValues.length > 0 ? `${Math.min(...bestTimesValues)}s` : '--';
 
   const stats = [
     {
       label: 'Levels Completed',
       value: `${completedCount} / 40`,
-      icon: <CheckCircle className="w-4 h-4 text-emerald-400" />,
-      color: 'border-emerald-500/20 bg-emerald-500/5',
+      icon: <CheckCircle className="w-4 h-4 text-[#648B75]" />,
     },
     {
       label: 'Total Cumulative Score',
       value: (progress.totalCumulativeScore || 0).toLocaleString(),
-      icon: <Trophy className="w-4 h-4 text-amber-400" />,
-      color: 'border-amber-500/20 bg-amber-500/5',
+      icon: <Trophy className="w-4 h-4 text-[#D58A36]" />,
     },
     {
-      label: 'Highest Single Level Score',
+      label: 'Highest Level Score',
       value: (progress.highScore || 0).toLocaleString(),
-      icon: <Zap className="w-4 h-4 text-violet-400" />,
-      color: 'border-violet-500/20 bg-violet-500/5',
+      icon: <Zap className="w-4 h-4 text-[#D58A36]" />,
     },
     {
       label: 'Total Games Played',
       value: progress.stats?.gamesPlayed || completedCount,
-      icon: <BarChart3 className="w-4 h-4 text-blue-400" />,
-      color: 'border-blue-500/20 bg-blue-500/5',
+      icon: <BarChart3 className="w-4 h-4 text-[#40372F]" />,
     },
     {
       label: 'Best Move Count',
       value: bestMoves,
-      icon: <Zap className="w-4 h-4 text-purple-400" />,
-      color: 'border-purple-500/20 bg-purple-500/5',
+      icon: <Zap className="w-4 h-4 text-[#648B75]" />,
     },
     {
       label: 'Best Completion Time',
       value: bestTime,
-      icon: <Clock className="w-4 h-4 text-sky-400" />,
-      color: 'border-sky-500/20 bg-sky-500/5',
+      icon: <Clock className="w-4 h-4 text-[#648B75]" />,
     },
     {
       label: 'Total Undos Used',
       value: progress.stats?.totalUndosUsed || 0,
-      icon: <Undo className="w-4 h-4 text-slate-400" />,
-      color: 'border-white/10 bg-white/5',
+      icon: <Undo className="w-4 h-4 text-[#786B5B]" />,
     },
     {
       label: 'Total Hints Used',
       value: progress.stats?.totalHintsUsed || 0,
-      icon: <HelpCircle className="w-4 h-4 text-rose-400" />,
-      color: 'border-rose-500/20 bg-rose-500/5',
+      icon: <HelpCircle className="w-4 h-4 text-[#786B5B]" />,
     },
     {
       label: 'Total Extra Tubes Used',
       value: progress.stats?.totalExtraTubesUsed || 0,
-      icon: <PlusCircle className="w-4 h-4 text-amber-500" />,
-      color: 'border-amber-500/20 bg-amber-500/5',
+      icon: <PlusCircle className="w-4 h-4 text-[#D58A36]" />,
     },
   ];
 
   return (
     <div
-      className="fixed inset-0 z-50 flex flex-col justify-start items-center p-4 sm:p-6 overflow-y-auto select-none font-['Plus_Jakarta_Sans',sans-serif] text-slate-800"
-      style={{
-        background: `
-          radial-gradient(circle at 18% 12%, #FFE8E8 0%, transparent 48%),
-          radial-gradient(circle at 82% 16%, #E8F6FF 0%, transparent 45%),
-          radial-gradient(circle at 50% 45%, #F7EFFF 0%, transparent 60%),
-          radial-gradient(circle at 15% 85%, #E7F9F3 0%, transparent 50%),
-          radial-gradient(circle at 85% 88%, #FFE8E8 0%, transparent 45%),
-          #FAF7FD
-        `,
-      }}
+      className="fixed inset-0 z-50 flex flex-col justify-start items-center p-4 sm:p-6 overflow-y-auto select-none font-['Plus_Jakarta_Sans',sans-serif]"
+      style={{ backgroundColor: '#F3E9D8', color: '#40372F' }}
     >
       <div className="w-full max-w-lg mx-auto space-y-4 pb-8 my-auto">
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-purple-100 pb-3">
+        <div className="flex items-center justify-between border-b border-[#D4C3AA] pb-3">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-violet-100 border border-violet-200 flex items-center justify-center text-violet-700 shadow-xs">
+            <div className="w-10 h-10 rounded-xl bg-[#E6D8C3] border border-[#D4C3AA] flex items-center justify-center text-[#D58A36]">
               <BarChart3 className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="text-xl sm:text-2xl font-black text-slate-900 uppercase tracking-tight">
+              <h2 className="text-xl sm:text-2xl font-black text-[#40372F] uppercase tracking-tight">
                 STATISTICS
               </h2>
-              <p className="text-xs text-slate-500">
-                Detailed Emoji Sorting Ball Career Metrics
+              <p className="text-xs text-[#786B5B]">
+                Detailed Emoji Sorting Career Metrics
               </p>
             </div>
           </div>
 
           <button
             onClick={onClose}
-            className="w-10 h-10 rounded-xl bg-white hover:bg-slate-50 active:scale-95 text-slate-600 flex items-center justify-center transition-colors cursor-pointer border border-purple-100 shadow-xs"
+            className="w-10 h-10 rounded-xl bg-[#E6D8C3] hover:bg-[#d8c8b0] active:scale-95 text-[#40372F] flex items-center justify-center transition-colors cursor-pointer border border-[#D4C3AA]"
             aria-label="Close Statistics"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* 9 Stats Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-          {stats.map((s, idx) => (
+        {/* Stats Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+          {stats.map((item, idx) => (
             <div
               key={idx}
-              className={`p-3 rounded-xl border flex flex-col justify-between shadow-xs bg-white/95 border-purple-100`}
+              className="p-3.5 rounded-2xl border border-[#D4C3AA] bg-[#E6D8C3] flex items-center justify-between shadow-xs"
             >
-              <div className="flex items-center justify-between mb-1">
-                <span className="text-[11px] font-bold text-slate-600 uppercase tracking-wider">
-                  {s.label}
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-[#F3E9D8] border border-[#D4C3AA] flex items-center justify-center">
+                  {item.icon}
+                </div>
+                <span className="text-xs font-semibold text-[#786B5B]">
+                  {item.label}
                 </span>
-                {s.icon}
               </div>
-              <div className="text-base sm:text-lg font-black text-slate-900 font-mono">
-                {s.value}
-              </div>
+              <span className="text-sm font-black font-mono text-[#40372F]">
+                {item.value}
+              </span>
             </div>
           ))}
         </div>
