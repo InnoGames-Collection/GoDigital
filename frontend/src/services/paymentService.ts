@@ -47,7 +47,7 @@ export const PaymentService = {
     onStatusChange?: (status: PaymentStatus, stepMessage?: string) => void
   ): Promise<PaymentResult> {
     const txId = 'TX_ETHIO_' + Date.now().toString(36).toUpperCase() + '_' + Math.floor(1000 + Math.random() * 9000);
-    const maskedPhone = maskPhoneNumber(profile.phoneNumber || '+251 91 000 0000');
+    const maskedPhone = profile.phoneNumber ? maskPhoneNumber(profile.phoneNumber) : 'Guest';
 
     const tx: PaymentTransaction = {
       transactionId: txId,
@@ -65,12 +65,9 @@ export const PaymentService = {
     try {
       const packageId = request.amountETB === 5 ? 'ENERGY_PACK_5' : 'COIN_PACK_10';
 
-      const res = await (apiService as any).request('/payments/process', {
-        method: 'POST',
-        body: JSON.stringify({
-          packageId,
-          itemType: request.itemType,
-        }),
+      const res = await apiService.processPayment({
+        packageId,
+        itemType: request.itemType,
       });
 
       if (res && (res.status === 'SUCCESS' || res.status === 'PENDING')) {

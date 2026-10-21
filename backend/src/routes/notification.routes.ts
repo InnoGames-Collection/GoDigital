@@ -4,24 +4,35 @@
  */
 
 import { FastifyInstance } from 'fastify';
-import { optionalAuth } from '../middleware/auth.js';
+import { requireAuth, optionalAuth } from '../middleware/auth.js';
 import { NotificationService } from '../services/notificationService.js';
 import { env } from '../config/env.js';
 
 export async function notificationRoutes(fastify: FastifyInstance) {
-  // 1. Fetch player notifications & unread count
-  fastify.get('/', { preHandler: [optionalAuth] }, async (req, reply) => {
+  // 1. Fetch player notifications & unread count (Protected against IDOR & PII Leak)
+  fastify.get('/', { preHandler: [requireAuth] }, async (req, reply) => {
     const query = (req.query || {}) as { phone?: string; unreadOnly?: string; limit?: string };
-    const phone = query.phone || req.user?.phone || env.DEFAULT_TEST_MSISDN;
-    const unreadOnly = query.unreadOnly === 'true' || query.unreadOnly === '1';
-    const limit = query.limit ? parseInt(query.limit, 10) : 50;
+    const authPhone = req.user!.phone;
+    const isAdmin = req.user?.role === 'admin';
 
-    if (!phone) {
-      return reply.status(400).send({ success: false, error: 'Phone parameter required.' });
+    // If query.phone is specified, enforce that only an Admin can query another user's notifications
+    let targetPhone = authPhone;
+    if (query.phone && query.phone !== authPhone) {
+      if (!isAdmin) {
+        return reply.status(403).send({
+          success: false,
+          error: 'FORBIDDEN',
+          message: 'Access denied: You may only view notifications for your own authenticated account.',
+        });
+      }
+      targetPhone = query.phone;
     }
 
+    const unreadOnly = query.unreadOnly === 'true' || query.unreadOnly === '1';
+    const limit = query.limit ? Math.min(100, Math.max(1, parseInt(query.limit, 10))) : 50;
+
     try {
-      const data = await NotificationService.getNotifications(phone, unreadOnly, limit);
+      const data = await NotificationService.getNotifications(targetPhone, unreadOnly, limit);
       return reply.send({ success: true, ...data });
     } catch (err: any) {
       fastify.log.error(err);
@@ -29,8 +40,8 @@ export async function notificationRoutes(fastify: FastifyInstance) {
     }
   });
 
-  // 2. Mark specific notification as read
-  fastify.post('/:id/read', { preHandler: [optionalAuth] }, async (req, reply) => {
+  // 2. Mark specific notification as read (Strictly authorized to owner or admin)
+  fastify.post('/:id/read', { preHandler: [requireAuth] }, async (req, reply) => {
     const { id } = req.params as { id: string };
 
     if (!id) {
@@ -46,18 +57,26 @@ export async function notificationRoutes(fastify: FastifyInstance) {
     }
   });
 
-  // 3. Mark all notifications as read for phone
-  fastify.post('/read-all', { preHandler: [optionalAuth] }, async (req, reply) => {
+  // 3. Mark all notifications as read for phone (Protected against IDOR)
+  fastify.post('/read-all', { preHandler: [requireAuth] }, async (req, reply) => {
     const body = (req.body || {}) as { phone?: string };
-    const query = (req.query || {}) as { phone?: string };
-    const phone = body.phone || query.phone || req.user?.phone || env.DEFAULT_TEST_MSISDN;
+    const authPhone = req.user!.phone;
+    const isAdmin = req.user?.role === 'admin';
 
-    if (!phone) {
-      return reply.status(400).send({ success: false, error: 'Phone parameter required.' });
+    let targetPhone = authPhone;
+    if (body.phone && body.phone !== authPhone) {
+      if (!isAdmin) {
+        return reply.status(403).send({
+          success: false,
+          error: 'FORBIDDEN',
+          message: 'Access denied: You may only clear notifications for your own authenticated account.',
+        });
+      }
+      targetPhone = body.phone;
     }
 
     try {
-      const count = await NotificationService.markAllAsRead(phone);
+      const count = await NotificationService.markAllAsRead(targetPhone);
       return reply.send({ success: true, markedCount: count });
     } catch (err: any) {
       fastify.log.error(err);
@@ -65,8 +84,20 @@ export async function notificationRoutes(fastify: FastifyInstance) {
     }
   });
 
-  // 4. Trigger / dispatch a new notification (used by game events, tournaments, wallet credits)
+  // 4. Trigger / dispatch a new notification (Restricted to internal services or Admin)
   fastify.post('/trigger', { preHandler: [optionalAuth] }, async (req, reply) => {
+    const internalSecret = req.headers['x-internal-secret'] as string | undefined;
+    const isInternalService = internalSecret && internalSecret === env.CRON_SECRET;
+    const isAdmin = req.user?.role === 'admin';
+
+    if (!isInternalService && !isAdmin) {
+      return reply.status(403).send({
+        success: false,
+        error: 'FORBIDDEN',
+        message: 'Notification trigger endpoint is restricted to authenticated administrators and internal system services.',
+      });
+    }
+
     const body = (req.body || {}) as {
       phone?: string;
       type: 'HIGH_SCORE' | 'TOURNAMENT_QUALIFIED' | 'COIN_CREDIT' | 'DAILY_REWARD' | 'SUBSCRIPTION' | 'SYSTEM' | 'WELCOME';
@@ -77,10 +108,9 @@ export async function notificationRoutes(fastify: FastifyInstance) {
       action_label?: string;
     };
 
-    const targetPhone = body.phone || req.user?.phone || env.DEFAULT_TEST_MSISDN;
-
+    const targetPhone = body.phone || req.user?.phone;
     if (!targetPhone || !body.title || !body.message) {
-      return reply.status(400).send({ success: false, error: 'Missing required notification fields.' });
+      return reply.status(400).send({ success: false, error: 'Missing required notification fields: phone, title, message.' });
     }
 
     try {
@@ -101,10 +131,9 @@ export async function notificationRoutes(fastify: FastifyInstance) {
     }
   });
 
-  // 5. Server-Sent Events (SSE) stream for real-time delivery
-  fastify.get('/stream', { preHandler: [optionalAuth] }, async (req, reply) => {
-    const query = (req.query || {}) as { phone?: string };
-    const phone = query.phone || req.user?.phone || env.DEFAULT_TEST_MSISDN;
+  // 5. Server-Sent Events (SSE) stream for real-time delivery (Strictly Authenticated)
+  fastify.get('/stream', { preHandler: [requireAuth] }, async (req, reply) => {
+    const phone = req.user!.phone;
 
     // Set SSE headers
     reply.raw.setHeader('Content-Type', 'text/event-stream');

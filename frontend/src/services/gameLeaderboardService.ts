@@ -29,13 +29,14 @@ const serverLeaderboardCache: Record<string, { timestamp: number; entries: GameL
 let isFetchingLeaderboard: Record<string, boolean> = {};
 
 export const maskPhone = (phone?: string): string => {
-  const digits = (phone || '0911428890').replace(/\D/g, '');
-  if (digits.length >= 9) {
+  if (!phone) return 'Player';
+  const digits = phone.replace(/\D/g, '');
+  if (digits.length >= 7) {
     const start = digits.slice(0, 3);
     const end = digits.slice(-3);
     return `${start}*****${end}`;
   }
-  return '091*****890';
+  return 'Player';
 };
 
 export interface UserGameStats {

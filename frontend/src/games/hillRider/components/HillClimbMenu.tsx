@@ -115,7 +115,7 @@ export const HillClimbMenu: React.FC<HillClimbMenuProps> = ({
               Current Challenge
             </span>
             <span className="text-sm font-black text-white">
-              Level {currentLevel.levelNumber}: {currentLevel.name}
+              Level {currentLevel.levelNumber}
             </span>
           </div>
           <span className="ml-2 text-[10px] font-black uppercase px-2 py-0.5 rounded-md bg-[#1688C9]/20 text-cyan-300 border border-[#1688C9]/40">

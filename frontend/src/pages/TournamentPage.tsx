@@ -28,13 +28,21 @@ export const TournamentPage: React.FC<TournamentPageProps> = ({
   profile,
   onPlayGame,
 }) => {
-  // 1. Live Countdown ticker
+  // 1. Live Countdown ticker and Authoritative Server Sync
   const [ticker, setTicker] = useState(0);
   useEffect(() => {
     const timer = setInterval(() => {
       setTicker((t) => t + 1);
     }, 1000);
     return () => clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    TournamentService.syncWithBackend();
+    const unsubscribe = TournamentService.subscribe(() => {
+      setTicker((t) => t + 1);
+    });
+    return () => unsubscribe();
   }, []);
 
   // 2. Fetch Tournament Summary

@@ -37,7 +37,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   onOpenSubscribe,
   showToast 
 }) => {
-  const [phoneNumber, setPhoneNumber] = useState('0911428890');
+  const [phoneNumber, setPhoneNumber] = useState('');
   const [otpCode, setOtpCode] = useState('');
   const [isRequestingOtp, setIsRequestingOtp] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
@@ -64,7 +64,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
     if (res.success) {
       setOtpSent(true);
-      setDemoCodeHint(res.demoOtp || '123456');
+      setDemoCodeHint(res.demoOtp || null);
       setCountdown(60);
       showToast('info', 'Verification Code Sent', res.message);
     } else {

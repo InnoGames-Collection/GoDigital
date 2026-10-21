@@ -3,15 +3,43 @@ import { cache } from '../config/cache.js';
 import { env } from '../config/env.js';
 import { normalizeEthiopianPhone } from '../utils/msisdn.js';
 import { signAccessToken, signRefreshToken } from '../utils/jwt.js';
-import { generateRandomOtp } from '../utils/crypto.js';
+import { generateRandomOtp, timingSafeEqual } from '../utils/crypto.js';
 import { UserProfile } from '../types/domain.js';
 import { streakService } from './streakService.js';
 
+export interface DemoAccountRecord {
+  phone: string;
+  demo_otp: string;
+  initial_coins: number;
+  is_active: boolean;
+  description?: string;
+}
+
 export const authService = {
   /**
+   * Authoritative lookup of approved demo phone numbers from PostgreSQL.
+   * Mandated by Section 3: The only permitted demo exception is the set of demo
+   * login phone numbers stored in the database for demo purposes.
+   */
+  async getDemoAccount(e164: string): Promise<DemoAccountRecord | null> {
+    try {
+      const res = await query(
+        `SELECT phone, demo_otp, initial_coins, is_active, description 
+           FROM demo_phone_numbers 
+          WHERE phone = $1 AND is_active = TRUE`,
+        [e164]
+      );
+      return res.rows[0] || null;
+    } catch (err: any) {
+      console.warn('[AuthService] Could not query demo_phone_numbers database table:', err.message);
+      return null;
+    }
+  },
+
+  /**
    * Request an OTP for an Ethiopian phone number.
-   * If it's a demo phone number stored in db (0977057270), sets demo OTP '123456';
-   * otherwise generates a secure random 6-digit OTP and stores it in Valkey/Redis with 5-minute TTL.
+   * If the number is registered in the database demo table, uses the database-configured demo OTP;
+   * otherwise generates a cryptographically secure random 6-digit OTP and stores it in Valkey with 5-minute TTL.
    */
   async requestOtp(phoneNumber: string): Promise<{ success: boolean; message: string; demoOtp?: string }> {
     const { isValid, e164, local } = normalizeEthiopianPhone(phoneNumber);
@@ -22,8 +50,9 @@ export const authService = {
       };
     }
 
-    const isDemo = local === '0977057270' || e164 === '+251977057270' || local === env.DEFAULT_TEST_MSISDN;
-    const otp = isDemo ? '123456' : generateRandomOtp(6);
+    const demoRecord = await this.getDemoAccount(e164);
+    const isDemo = Boolean(demoRecord);
+    const otp = demoRecord ? demoRecord.demo_otp : generateRandomOtp(6);
 
     // Cache in Redis/Valkey with 5m TTL
     try {
@@ -35,12 +64,13 @@ export const authService = {
     return {
       success: true,
       message: `SMS verification code dispatched to ${local}.`,
-      demoOtp: isDemo ? '123456' : undefined,
+      demoOtp: isDemo ? demoRecord?.demo_otp : undefined,
     };
   },
 
   /**
    * Verify the 6-digit OTP and authenticate the player in PostgreSQL.
+   * Utilizes timingSafeEqual to defeat timing-analysis attacks.
    */
   async verifyOtp(phoneNumber: string, otpInput: string): Promise<{
     success: boolean;
@@ -53,13 +83,17 @@ export const authService = {
       return { success: false, message: 'Invalid Ethiopian phone number format.' };
     }
 
-    const isDemo = local === '0977057270' || e164 === '+251977057270' || local === env.DEFAULT_TEST_MSISDN;
+    const cleanInput = otpInput.trim();
+    const demoRecord = await this.getDemoAccount(e164);
+
     let cachedOtp: string | null = null;
     try {
       cachedOtp = await cache.get(`otp:${e164}`);
     } catch {}
 
-    const isMatch = (cachedOtp && cachedOtp === otpInput.trim()) || (isDemo && otpInput.trim() === '123456');
+    const isDemoMatch = demoRecord ? timingSafeEqual(cleanInput, demoRecord.demo_otp) : false;
+    const isCachedMatch = cachedOtp ? timingSafeEqual(cleanInput, cachedOtp) : false;
+    const isMatch = isDemoMatch || isCachedMatch;
 
     if (!isMatch) {
       return {
@@ -73,14 +107,14 @@ export const authService = {
       await cache.del(`otp:${e164}`);
     } catch {}
 
-    const initialCoins = isDemo ? 100 : 50;
+    const initialCoins = demoRecord ? demoRecord.initial_coins : 50;
 
-    // Upsert Profile in PostgreSQL
+    // Upsert Profile in PostgreSQL (strictly 'player' role, never admin)
     const upsertRes = await query(
-      `INSERT INTO profiles (phone, display_name, avatar_id, coins, energy, telebirr_linked, telebirr_balance)
-       VALUES ($1, $2, 'avatar_runner', $3, 5, TRUE, 0.00)
+      `INSERT INTO profiles (phone, display_name, avatar_id, coins, energy, telebirr_linked, telebirr_balance, role)
+       VALUES ($1, $2, 'avatar_runner', $3, 5, TRUE, 0.00, 'player')
        ON CONFLICT (phone) DO UPDATE
-         SET telebirr_linked = TRUE, coins = GREATEST(profiles.coins, $3), updated_at = NOW()
+         SET telebirr_linked = TRUE, coins = GREATEST(profiles.coins, $3), role = 'player', updated_at = NOW()
        RETURNING id, role`,
       [e164, `Gamer_${local.slice(-4)}`, initialCoins]
     );
@@ -89,8 +123,8 @@ export const authService = {
     await query(`INSERT INTO user_preferences (user_id) VALUES ($1) ON CONFLICT (user_id) DO NOTHING`, [user.id]);
     await query(`INSERT INTO user_streaks (user_id) VALUES ($1) ON CONFLICT (user_id) DO NOTHING`, [user.id]);
 
-    const accessToken = signAccessToken({ userId: user.id, phone: e164, role: user.role });
-    const refreshToken = signRefreshToken({ userId: user.id, phone: e164, role: user.role });
+    const accessToken = signAccessToken({ userId: user.id, phone: e164, role: 'player' });
+    const refreshToken = signRefreshToken({ userId: user.id, phone: e164, role: 'player' });
 
     try {
       await cache.set(`session:${user.id}`, JSON.stringify({ userId: user.id, phone: e164 }), 'EX', 86400);
@@ -105,9 +139,12 @@ export const authService = {
       tokens: { accessToken, refreshToken },
     };
   },
+
   /**
    * TeleBirr SuperApp Direct Connect Single-Sign-On
-   * Authenticates player through telebirr Game Center credentials
+   * Authenticates player through telebirr Game Center credentials.
+   * Defends against unauthenticated MSISDN spoofing: only database-approved demo accounts
+   * or valid telebirr session tokens are accepted.
    */
   async loginWithTeleBirr(
     phoneParam?: string,
@@ -127,17 +164,13 @@ export const authService = {
     }
 
     if (!rawPhone) {
-      if (env.NODE_ENV === 'production' && env.TELEBIRR_MODE === 'live') {
-        return {
-          success: false,
-          message: 'Authentication failed: Telebirr MSISDN or session token is required.',
-        };
-      }
-      rawPhone = env.DEFAULT_TEST_MSISDN;
+      return {
+        success: false,
+        message: 'Authentication failed: Telebirr MSISDN or session token is required.',
+      };
     }
 
     const { isValid, e164, local } = normalizeEthiopianPhone(rawPhone);
-
     if (!isValid) {
       return {
         success: false,
@@ -145,14 +178,25 @@ export const authService = {
       };
     }
 
-    const initialCoins = (local === '0977057270' || rawPhone === '0977057270' || rawPhone === env.DEFAULT_TEST_MSISDN) ? 100 : 50;
+    // Check if MSISDN is an explicitly approved database demo record
+    const demoRecord = await this.getDemoAccount(e164);
 
-    // Upsert Profile in PostgreSQL
+    // If no telebirr token is provided, this direct login is ONLY allowed for database demo accounts
+    if (!telebirrToken && !demoRecord) {
+      return {
+        success: false,
+        message: 'Direct phone authentication is restricted to approved database demo accounts. Please sign in using the SMS OTP verification flow.',
+      };
+    }
+
+    const initialCoins = demoRecord ? demoRecord.initial_coins : 50;
+
+    // Upsert Profile in PostgreSQL (strictly player role)
     const upsertRes = await query(
-      `INSERT INTO profiles (phone, display_name, avatar_id, coins, energy, telebirr_linked, telebirr_balance)
-       VALUES ($1, $2, 'avatar_runner', $3, 5, TRUE, 0.00)
+      `INSERT INTO profiles (phone, display_name, avatar_id, coins, energy, telebirr_linked, telebirr_balance, role)
+       VALUES ($1, $2, 'avatar_runner', $3, 5, TRUE, 0.00, 'player')
        ON CONFLICT (phone) DO UPDATE
-         SET telebirr_linked = TRUE, coins = GREATEST(profiles.coins, $3), updated_at = NOW()
+         SET telebirr_linked = TRUE, coins = GREATEST(profiles.coins, $3), role = 'player', updated_at = NOW()
        RETURNING id, role`,
       [e164, `Gamer_${local.slice(-4)}`, initialCoins]
     );
@@ -163,8 +207,8 @@ export const authService = {
     await query(`INSERT INTO user_preferences (user_id) VALUES ($1) ON CONFLICT (user_id) DO NOTHING`, [user.id]);
     await query(`INSERT INTO user_streaks (user_id) VALUES ($1) ON CONFLICT (user_id) DO NOTHING`, [user.id]);
 
-    const accessToken = signAccessToken({ userId: user.id, phone: e164, role: user.role });
-    const refreshToken = signRefreshToken({ userId: user.id, phone: e164, role: user.role });
+    const accessToken = signAccessToken({ userId: user.id, phone: e164, role: 'player' });
+    const refreshToken = signRefreshToken({ userId: user.id, phone: e164, role: 'player' });
 
     // Cache active session in Valkey (24h TTL)
     await cache.set(`session:${user.id}`, JSON.stringify({ userId: user.id, phone: e164 }), 'EX', 86400);

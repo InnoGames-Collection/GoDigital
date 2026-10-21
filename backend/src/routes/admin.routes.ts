@@ -202,8 +202,17 @@ export async function adminRoutes(fastify: FastifyInstance) {
     };
   });
 
-  // Role Switcher for Staging/Console Testing
-  fastify.post('/admin/auth/switch', { preHandler: [requireAdminAuth] }, async (req: FastifyRequest, reply: FastifyReply) => {
+  // Role Switcher for Staging/Console Testing (Hardened against Vertical Privilege Escalation)
+  fastify.post('/admin/auth/switch', { preHandler: [requirePermission('admin_users:manage')] }, async (req: FastifyRequest, reply: FastifyReply) => {
+    // Strictly disable role switching in production per INSA cybersecurity baselines
+    if (process.env.NODE_ENV === 'production') {
+      return reply.status(403).send({
+        success: false,
+        error: 'FORBIDDEN',
+        message: 'Administrative role switching is strictly disabled in production environments per INSA security controls.',
+      });
+    }
+
     const { targetAdminId } = (req.body || {}) as { targetAdminId: string };
     if (!targetAdminId) {
       return reply.status(400).send({ error: 'Missing targetAdminId' });
@@ -214,6 +223,24 @@ export async function adminRoutes(fastify: FastifyInstance) {
     if (!target) {
       return reply.status(404).send({ error: 'Target admin user not found' });
     }
+
+    if (!target.is_active) {
+      return reply.status(403).send({ error: 'Cannot switch to deactivated admin user.' });
+    }
+
+    await AuditLogger.log({
+      adminId: req.adminUser!.adminId,
+      adminEmail: req.adminUser!.email,
+      adminRole: req.adminUser!.role,
+      action: 'ADMIN_ROLE_SWITCH',
+      resourceType: 'ADMIN_USER',
+      resourceId: target.id,
+      previousState: { role: req.adminUser!.role, email: req.adminUser!.email },
+      newState: { targetRole: target.role, targetEmail: target.email },
+      reason: 'Controlled role switch authorized by Super Admin in non-production audit mode.',
+      ipAddress: req.ip || '127.0.0.1',
+      userAgent: (req.headers['user-agent'] as string) || 'AdminConsole',
+    });
 
     const token = signAdminToken({
       adminId: target.id,

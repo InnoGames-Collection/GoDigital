@@ -24,6 +24,8 @@ export interface NotificationItem {
   created_at: string;
 }
 
+import { apiService } from './apiService';
+
 const STORAGE_CACHE_KEY = 'godigital_notifications_cache_v2';
 const getApiBase = () => {
   if (typeof window !== 'undefined' && window.location && window.location.origin) {
@@ -71,11 +73,18 @@ class NotificationService {
    * Fetch all notifications for the given user phone from DB
    */
   async fetchNotifications(phone?: string): Promise<{ notifications: NotificationItem[]; unreadCount: number }> {
-    const queryPhone = phone || '0911223344';
+    const token = apiService.getToken();
     try {
-      const res = await fetch(`${getApiBase()}/notifications?phone=${encodeURIComponent(queryPhone)}&limit=30`, {
-        headers: { 'Accept': 'application/json' },
-      });
+      const headers: Record<string, string> = { 'Accept': 'application/json' };
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      const url = phone
+        ? `${getApiBase()}/notifications?phone=${encodeURIComponent(phone)}&limit=30`
+        : `${getApiBase()}/notifications?limit=30`;
+
+      const res = await fetch(url, { headers });
 
       if (res.ok) {
         const data = await res.json();
@@ -105,10 +114,15 @@ class NotificationService {
     const updated = this.memoryCache.map((n) => (n.id === id ? { ...n, is_read: true } : n));
     this.saveCache(updated);
 
+    const token = apiService.getToken();
     try {
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
       const res = await fetch(`${getApiBase()}/notifications/${encodeURIComponent(id)}/read`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
       });
       return res.ok;
     } catch (err) {
@@ -121,16 +135,20 @@ class NotificationService {
    * Mark all notifications as read for this user
    */
   async markAllAsRead(phone?: string): Promise<boolean> {
-    const queryPhone = phone || '0911223344';
     // Optimistic cache update
     const updated = this.memoryCache.map((n) => ({ ...n, is_read: true }));
     this.saveCache(updated);
 
+    const token = apiService.getToken();
     try {
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
       const res = await fetch(`${getApiBase()}/notifications/read-all`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone: queryPhone }),
+        headers,
+        body: JSON.stringify(phone ? { phone } : {}),
       });
       return res.ok;
     } catch (err) {
@@ -151,11 +169,16 @@ class NotificationService {
     action_label?: string;
     metadata?: Record<string, any>;
   }): Promise<NotificationItem | null> {
-    const queryPhone = payload.phone || '0911223344';
+    const token = apiService.getToken();
+    const queryPhone = payload.phone || '';
     try {
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
       const res = await fetch(`${getApiBase()}/notifications/trigger`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({ ...payload, phone: queryPhone }),
       });
       if (res.ok) {
@@ -196,8 +219,8 @@ class NotificationService {
     onCountUpdate?: (count: number) => void
   ): () => void {
     if (typeof window === 'undefined') return () => {};
+    if (!phone) return () => {};
 
-    const queryPhone = phone || '0911223344';
     let isCleanedUp = false;
 
     const connectSSE = () => {
@@ -207,15 +230,20 @@ class NotificationService {
           this.activeEventSource.close();
         }
 
-        const sseUrl = `${getApiBase()}/notifications/stream?phone=${encodeURIComponent(queryPhone)}`;
+        const token = apiService.getToken();
+        let sseUrl = `${getApiBase()}/notifications/stream?phone=${encodeURIComponent(phone)}`;
+        if (token) {
+          sseUrl += `&token=${encodeURIComponent(token)}`;
+        }
+
         const es = new EventSource(sseUrl);
         this.activeEventSource = es;
 
         es.onmessage = (event) => {
           try {
             const data = JSON.parse(event.data);
-            if (data.type === 'notification' && data.data) {
-              const notif: NotificationItem = data.data;
+            const notif = data.notification || data.data;
+            if (notif && (data.type === 'NOTIFICATION' || data.type === 'notification')) {
               // Add to cache
               const exists = this.memoryCache.some((n) => n.id === notif.id);
               if (!exists) {
@@ -226,7 +254,7 @@ class NotificationService {
                 const count = this.memoryCache.filter((n) => !n.is_read).length;
                 onCountUpdate(count);
               }
-            } else if (data.type === 'connected') {
+            } else if (data.type === 'CONNECTED' || data.type === 'connected') {
               // Initial connection acknowledged
             }
           } catch (err) {
@@ -250,7 +278,7 @@ class NotificationService {
     // Secondary backup polling every 30s to keep count fresh
     this.pollInterval = setInterval(async () => {
       if (isCleanedUp) return;
-      const res = await this.fetchNotifications(queryPhone);
+      const res = await this.fetchNotifications(phone);
       if (onCountUpdate) {
         onCountUpdate(res.unreadCount);
       }

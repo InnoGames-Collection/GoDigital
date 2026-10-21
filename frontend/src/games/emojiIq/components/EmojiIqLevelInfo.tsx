@@ -6,7 +6,7 @@
 import React from 'react';
 import { EmojiIqLevelConfig, EmojiIqPlayerStats } from '../types';
 import { EMOJI_IQ_COLORS } from '../colors';
-import { Trophy, Play, ArrowLeft, Star, Clock, Flame, Heart, Target } from 'lucide-react';
+import { Trophy, Play, ArrowLeft, Star, Clock, Target } from 'lucide-react';
 import { emojiIqAudio } from '../emojiIqAudio';
 
 interface EmojiIqLevelInfoProps {
@@ -174,19 +174,15 @@ export const EmojiIqLevelInfo: React.FC<EmojiIqLevelInfoProps> = ({
           </div>
         </div>
 
-        {/* Lives & Reward Banner */}
-        <div className="w-full flex items-center justify-between px-3 py-2 rounded-2xl bg-[#F7F5FF] border border-[#6C5CE7]/15">
+        {/* Stage Format & Tournament Mode Banner */}
+        <div className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-2xl bg-[#F7F5FF] border border-[#6C5CE7]/15">
           <div className="flex items-center gap-1.5">
-            <span className="text-xs font-bold text-[#6B6780]">Available Lives:</span>
-            <div className="flex items-center gap-0.5">
-              {Array.from({ length: 3 }).map((_, i) => (
-                <Heart key={i} className="w-3.5 h-3.5 fill-[#FF5A67] text-[#FF5A67]" />
-              ))}
-            </div>
+            <span className="text-xs font-bold text-[#6B6780]">Format:</span>
+            <span className="text-xs font-black text-[#6C5CE7]">{levelConfig.theme}</span>
           </div>
 
-          <div className="flex items-center gap-1 text-xs font-black text-[#FFB703]">
-            <span>Reward: +{levelConfig.rewardCoins} 🪙</span>
+          <div className="flex items-center gap-1 text-xs font-black text-[#20C997]">
+            <span>10 Puzzles • Full Run</span>
           </div>
         </div>
       </div>

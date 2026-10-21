@@ -26,6 +26,46 @@ export const HELIX_PHYSICS = {
 
 export const STORAGE_KEY = 'teleplay_helix_jump_savedata_v1';
 
+/**
+ * Helix Jump Time-based Floor Scoring Configuration
+ *
+ * Scoring table based on elapsed active time spent clearing each individual floor:
+ * - 0 to 2.00 seconds: 5 points
+ * - More than 2.00 to 4.00 seconds: 4 points
+ * - More than 4.00 to 6.00 seconds: 3 points
+ * - More than 6.00 to 9.00 seconds: 2 points
+ * - More than 9.00 to 12.00 seconds: 1 point
+ * - More than 12.00 seconds: 0 points
+ */
+export interface HelixScoringTier {
+  readonly maxSeconds: number;
+  readonly points: number;
+}
+
+export const HELIX_FLOOR_SCORING_TIERS: readonly HelixScoringTier[] = [
+  { maxSeconds: 2.0, points: 5 },
+  { maxSeconds: 4.0, points: 4 },
+  { maxSeconds: 6.0, points: 3 },
+  { maxSeconds: 9.0, points: 2 },
+  { maxSeconds: 12.0, points: 1 },
+] as const;
+
+/**
+ * Authoritative, pure function calculating points earned for a floor given elapsed active time.
+ * Strict integer between 0 and 5, with precise boundary comparisons.
+ */
+export function calculateHelixFloorScore(elapsedSeconds: number): number {
+  if (Number.isNaN(elapsedSeconds) || elapsedSeconds < 0) {
+    return 5;
+  }
+  for (const tier of HELIX_FLOOR_SCORING_TIERS) {
+    if (elapsedSeconds <= tier.maxSeconds) {
+      return tier.points;
+    }
+  }
+  return 0;
+}
+
 export const LEVEL_THEMES: LevelTheme[] = [
   // Level 1: Blue + Cyan + White + Orange accents
   {

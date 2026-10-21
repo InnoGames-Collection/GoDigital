@@ -140,7 +140,11 @@ class ApiService {
     if (res?.success && res.profile) {
       return res.profile;
     }
-    return this.request<UserProfile>('/profile');
+    const res2 = await this.request<{ success: boolean; profile: UserProfile }>('/auth/profile');
+    if (res2?.success && res2.profile) {
+      return res2.profile;
+    }
+    return null;
   }
 
   /**
@@ -277,6 +281,35 @@ class ApiService {
       checkoutUrl: res?.checkoutUrl,
       message: res?.message,
     };
+  }
+
+  /**
+   * Process a payment purchase via backend Telebirr gateway
+   */
+  async processPayment(payload: { packageId: string; itemType: string }): Promise<{
+    status: string;
+    transaction?: any;
+    message?: string;
+    checkoutUrl?: string;
+  } | null> {
+    return this.request<{
+      status: string;
+      transaction?: any;
+      message?: string;
+      checkoutUrl?: string;
+    }>('/payments/process', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  /**
+   * Cancel subscription auto-renewal
+   */
+  async cancelSubscription(): Promise<{ success: boolean; message: string; profile?: UserProfile } | null> {
+    return this.request<{ success: boolean; message: string; profile?: UserProfile }>('/payments/cancel-subscription', {
+      method: 'POST',
+    });
   }
 
   /**

@@ -437,10 +437,10 @@ export const CompetitiveService = {
     const candidateList: RankCandidate[] = cache && cache.entries.length > 0
       ? cache.entries.map((e, idx) => ({
           userId: e.userId || `contender_${idx + 1}`,
-          phoneNumberMasked: e.phoneNumberMasked || '091*****890',
-          totalPoints: Number(e.score) || 0,
-          bestScoresCount: 5,
-          timestamp: Date.now() - (idx * 3600000),
+          phoneNumberMasked: (e as any).masked || e.phoneNumberMasked || `Player ${idx + 1}`,
+          totalPoints: Number((e as any).totalPoints ?? e.score ?? 0),
+          bestScoresCount: (e as any).bestScoresCount || 5,
+          timestamp: (e as any).timestamp || (Date.now() - (idx * 3600000)),
           isCurrentUser: false,
           defaultReward: e.reward,
         }))
@@ -458,7 +458,7 @@ export const CompetitiveService = {
     if (userTotalPoints > 0) {
       candidateList.push({
         userId: profile.id,
-        phoneNumberMasked: maskPhoneNumber(profile.phoneNumber || '0912345678'),
+        phoneNumberMasked: profile.phoneNumber ? maskPhoneNumber(profile.phoneNumber) : 'You',
         totalPoints: userTotalPoints,
         bestScoresCount: userScoresCount,
         timestamp: userTimestamp,

@@ -5,6 +5,8 @@ import { streakService } from '../services/streakService.js';
 import { walletService } from '../services/walletService.js';
 import { leaderboardService } from '../services/leaderboardService.js';
 import { NotificationService } from '../services/notificationService.js';
+import { authService } from '../services/authService.js';
+import { GameAntiCheat } from '../services/gameAntiCheat.js';
 import { query } from '../config/database.js';
 import { env } from '../config/env.js';
 
@@ -261,10 +263,10 @@ export async function gameRoutes(fastify: FastifyInstance) {
     const PRIZES = ['50K ETB', '40K ETB', '35K ETB', '30K ETB', '25K ETB', '20K ETB', '15K ETB', '10K ETB', '5K ETB', '3K ETB'];
 
     const entries = res.rows.map((row: any, idx: number) => {
-      const rawPhone = row.phone_local || row.phone || '0911000000';
+      const rawPhone = row.phone_local || row.phone || '';
       const masked = rawPhone.length >= 7 
         ? `${rawPhone.substring(0, 3)}*****${rawPhone.slice(-3)}` 
-        : '091*****890';
+        : `Player ${idx + 1}`;
 
       return {
         rank: idx + 1,
@@ -301,10 +303,10 @@ export async function gameRoutes(fastify: FastifyInstance) {
     const PRIZES = ['50K ETB', '40K ETB', '35K ETB', '30K ETB', '25K ETB', '20K ETB', '15K ETB', '10K ETB', '5K ETB', '3K ETB'];
 
     const entries = res.rows.map((row: any, idx: number) => {
-      const rawPhone = row.phone_local || row.phone || '0911000000';
+      const rawPhone = row.phone_local || row.phone || '';
       const masked = rawPhone.length >= 7 
         ? `${rawPhone.substring(0, 3)}*****${rawPhone.slice(-3)}` 
-        : '091*****890';
+        : `Player ${idx + 1}`;
 
       return {
         rank: idx + 1,
@@ -337,15 +339,15 @@ export async function gameRoutes(fastify: FastifyInstance) {
     );
 
     const entries = res.rows.map((row: any, idx: number) => {
-      const rawPhone = row.phone_local || row.phone || '0911000000';
+      const rawPhone = row.phone_local || row.phone || '';
       const masked = rawPhone.length >= 7 
         ? `${rawPhone.substring(0, 3)}*****${rawPhone.slice(-3)}` 
-        : '091*****890';
+        : `Player ${idx + 1}`;
 
       return {
         rank: idx + 1,
         userId: row.userId,
-        playerName: row.playerName || `Player ${masked}`,
+        playerName: row.playerName || (rawPhone.length >= 7 ? `Player ${masked}` : `Player ${idx + 1}`),
         playerMasked: masked,
         score: parseInt(row.score, 10) || 0,
         rewardText: idx === 0 ? '500 Coins' : idx === 1 ? '300 Coins' : idx === 2 ? '200 Coins' : idx < 5 ? '100 Coins' : undefined,
@@ -409,13 +411,13 @@ export async function gameRoutes(fastify: FastifyInstance) {
   // =========================================================================
 
   fastify.post('/session/start', { preHandler: [optionalAuth] }, async (req, reply) => {
-    const userId = req.user?.userId;
+    const userId = req.user?.userId || null;
     const { msisdn, gameId } = (req.body || {}) as { msisdn?: string; gameId: string };
-    const playerPhone = msisdn || req.user?.phone || env.DEFAULT_TEST_MSISDN;
+    const playerPhone = msisdn || req.user?.phone || 'GUEST';
     if (!gameId) return reply.status(400).send({ error: 'Missing gameId' });
 
     const session = await gameSessionService.startPuzzleSession({
-      userId: userId || '00000000-0000-0000-0000-000000000000',
+      userId: userId as any,
       msisdn: playerPhone,
       gameId,
       levelNumber: 1,
@@ -431,20 +433,23 @@ export async function gameRoutes(fastify: FastifyInstance) {
   });
 
   fastify.post('/session/submit', { preHandler: [optionalAuth] }, async (req, reply) => {
-    const userId = req.user?.userId || '00000000-0000-0000-0000-000000000000';
-    const { sessionId, nonce, moves, rawScore, durationSeconds, gameId } = (req.body || {}) as any;
+    const userId = req.user?.userId;
+    const playerPhone = req.user?.phone;
+    const { sessionId, nonce, moves, rawScore, durationSeconds, gameId, tournamentId } = (req.body || {}) as any;
 
     let finalScore = Number(rawScore) || 0;
-    const playerPhone = req.user?.phone || env.DEFAULT_TEST_MSISDN;
+    const targetGameId = gameId || 'helix-jump';
+    const duration = Math.max(1, Number(durationSeconds) || 5);
 
-    if (sessionId && nonce) {
+    // 1. Authoritative puzzle solver session submission (if session/nonce provided)
+    if (sessionId && nonce && userId) {
       try {
         const result = await gameSessionService.submitPuzzleSolution({
           userId,
           sessionId,
           nonce,
           moves: moves || [],
-          durationSeconds: durationSeconds || 5,
+          durationSeconds: duration,
         });
         if (result.success && result.score) {
           finalScore = result.score;
@@ -457,14 +462,90 @@ export async function gameRoutes(fastify: FastifyInstance) {
       }
     }
 
-    // Trigger Notification for Verified Score / Personal Record
+    // 2. Server-Authoritative Anti-Cheat Verification on incoming score
+    const antiCheat = await GameAntiCheat.validateScore(targetGameId, finalScore, duration);
+    if (!antiCheat.valid) {
+      fastify.log.warn(`[Anti-Cheat Violation] Rejected score ${finalScore} in ${targetGameId} for phone ${playerPhone}: ${antiCheat.reason}`);
+      return reply.status(400).send({
+        success: false,
+        verified: false,
+        error: antiCheat.reason || 'Score rejected by anti-cheat controls.',
+      });
+    }
+
+    let updatedProfile = null;
+    let coinsEarned = 0;
+    let xpEarned = 0;
+
+    // 3. Atomically persist score and award currency in PostgreSQL if authenticated
+    if (userId) {
+      // High score
+      await query(
+        `INSERT INTO high_scores (user_id, game_id, best_score, updated_at)
+         VALUES ($1, $2, $3, NOW())
+         ON CONFLICT (user_id, game_id) DO UPDATE
+           SET best_score = GREATEST(high_scores.best_score, EXCLUDED.best_score),
+               updated_at = NOW()`,
+        [userId, targetGameId, finalScore]
+      );
+
+      // Daily score
+      await query(
+        `INSERT INTO daily_scores (user_id, game_id, score_date, best_score)
+         VALUES ($1, $2, CURRENT_DATE, $3)
+         ON CONFLICT (user_id, game_id, score_date) DO UPDATE
+           SET best_score = GREATEST(daily_scores.best_score, EXCLUDED.best_score)`,
+        [userId, targetGameId, finalScore]
+      );
+
+      // Tournament entry update if tournamentId specified
+      if (tournamentId && playerPhone) {
+        const maskedPhone = playerPhone.length >= 7 
+          ? `${playerPhone.substring(0, 3)}****${playerPhone.slice(-3)}` 
+          : '091****890';
+
+        await query(
+          `INSERT INTO tournament_entries (tournament_id, player_msisdn, masked_msisdn, score, prize_etb, submitted_at)
+           VALUES ($1, $2, $3, $4, 0, NOW())
+           ON CONFLICT (tournament_id, player_msisdn) DO UPDATE
+             SET score = GREATEST(tournament_entries.score, EXCLUDED.score),
+                 submitted_at = NOW()`,
+          [tournamentId, playerPhone, maskedPhone, finalScore]
+        );
+      }
+
+      // Compute coins and XP authoritatively
+      coinsEarned = Math.max(5, Math.floor(finalScore / 20));
+      xpEarned = Math.max(10, Math.floor(finalScore / 10));
+
+      await query(
+        `UPDATE profiles 
+            SET coins = coins + $1, 
+                xp = xp + $2, 
+                matches_played = matches_played + 1, 
+                updated_at = NOW() 
+          WHERE id = $3`,
+        [coinsEarned, xpEarned, userId]
+      );
+
+      await query(
+        `INSERT INTO coin_transactions (user_id, type, amount, balance_after, reference_id, description)
+         VALUES ($1, 'LEVEL_REWARD', $2, (SELECT coins FROM profiles WHERE id = $1), $3, $4)`,
+        [userId, coinsEarned, `MATCH_${targetGameId}_${Date.now()}`, `Match reward for ${targetGameId} (${finalScore} pts)`]
+      );
+
+      // Load updated authoritative profile
+      updatedProfile = await authService.getProfile(userId);
+    }
+
+    // 4. Trigger Notification for Verified Score / Personal Record
     if (finalScore > 0 && playerPhone) {
       NotificationService.createNotification({
         phone: playerPhone,
         type: 'HIGH_SCORE',
         title: '🏆 Score Verified!',
-        message: `You recorded a score of ${finalScore.toLocaleString()} pts in ${gameId || 'Helix Jump'}!`,
-        metadata: { gameId, score: finalScore },
+        message: `You recorded a score of ${finalScore.toLocaleString()} pts in ${targetGameId}!`,
+        metadata: { gameId: targetGameId, score: finalScore },
         action_url: 'leaderboard',
         action_label: 'View Rankings',
       }).catch((e) => fastify.log.warn(`[Notification] Failed to create score notification: ${e}`));
@@ -473,7 +554,10 @@ export async function gameRoutes(fastify: FastifyInstance) {
     return reply.send({
       success: true,
       verified: true,
-      score: finalScore || 1000,
+      score: finalScore,
+      coinsEarned,
+      xpEarned,
+      updatedProfile,
     });
   });
 }

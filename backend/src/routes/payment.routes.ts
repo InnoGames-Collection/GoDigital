@@ -1,6 +1,7 @@
 import { FastifyInstance } from 'fastify';
 import { requireAuth } from '../middleware/auth.js';
 import { telebirrService } from '../services/telebirrService.js';
+import { subscriptionService } from '../services/subscriptionService.js';
 import { query } from '../config/database.js';
 import { SubscriptionPlan } from '../types/domain.js';
 
@@ -112,6 +113,13 @@ export async function paymentRoutes(fastify: FastifyInstance) {
         checkoutUrl: result.checkoutUrl,
         message: result.message,
       });
+    });
+
+    // Cancel active subscription auto-renewal
+    authScope.post('/cancel-subscription', async (request, reply) => {
+      const userId = request.user!.userId;
+      const result = await subscriptionService.cancelSubscription(userId);
+      return reply.send(result);
     });
 
     // Payment history

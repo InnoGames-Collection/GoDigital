@@ -94,12 +94,14 @@ export const gameSessionService = {
       .update(`${userId}:${gameId}:${nonce}:${Date.now()}`)
       .digest('hex');
 
+    const safeUserId = userId && userId !== '00000000-0000-0000-0000-000000000000' ? userId : null;
+
     // Persist session into PostgreSQL
     await query(
       `INSERT INTO game_sessions (
          session_id, user_id, player_msisdn, game_id, session_token, nonce, level_number, status, started_at
        ) VALUES ($1, $2, $3, $4, $5, $6, $7, 'IN_PROGRESS', NOW())`,
-      [sessionId, userId, msisdn, gameId, token, nonce, levelNumber]
+      [sessionId, safeUserId, msisdn, gameId, token, nonce, levelNumber]
     );
 
     // Cache in Redis/Valkey with 15m expiration

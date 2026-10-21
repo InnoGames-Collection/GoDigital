@@ -7,7 +7,7 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import * as THREE from 'three';
 import { LevelDefinition, RingSector, FloatingScoreText } from '../types';
-import { HELIX_DIMENSIONS, HELIX_PHYSICS, LEVEL_THEMES } from '../constants';
+import { HELIX_DIMENSIONS, HELIX_PHYSICS, LEVEL_THEMES, calculateHelixFloorScore } from '../constants';
 import { helixAudio } from '../audioEngine';
 
 interface HelixJump3DCanvasProps {
@@ -81,6 +81,8 @@ export const HelixJump3DCanvas: React.FC<HelixJump3DCanvasProps> = ({
     flashingDangerTime: 0,
     ringsDestroyed: new Set<number>(),
     scoredFloors: new Set<number>(),
+    currentFloorActiveTime: 0, // Monotonic active seconds spent clearing the current floor
+    activeFloorIndex: 0,       // Current floor index being attempted
   });
 
   const isPausedRef = useRef(isPaused);
@@ -127,6 +129,8 @@ export const HelixJump3DCanvas: React.FC<HelixJump3DCanvasProps> = ({
     const state = stateRef.current;
     state.score = 0;
     state.scoredFloors.clear();
+    state.currentFloorActiveTime = 0;
+    state.activeFloorIndex = 0;
     const ring0TopY = level.rings[0].y + HELIX_DIMENSIONS.PLATFORM_THICKNESS;
     state.ballY = ring0TopY + HELIX_DIMENSIONS.BALL_RADIUS;
     state.ballVy = HELIX_PHYSICS.BOUNCE_IMPULSE;
@@ -142,22 +146,36 @@ export const HelixJump3DCanvas: React.FC<HelixJump3DCanvasProps> = ({
     state.squashTime = 0;
     state.ringsDestroyed.clear();
 
-    // Authoritative idempotent floor scoring function:
+    // Authoritative idempotent time-based floor scoring function:
     // Tracks each passed floor uniquely by index in scoredFloors Set.
     // Multiple bounces or repeated collision evaluations never award duplicate points.
     const recordPassedFloor = (floorIndex: number) => {
       if (state.gameOverTriggered || state.levelCompleteTriggered) return;
-      let newPoints = 0;
+      let totalFloorPointsGained = 0;
+      let lastFloorPoints = 0;
+      let newlyScoredCount = 0;
+
       for (let k = 0; k <= floorIndex; k++) {
         if (!state.scoredFloors.has(k)) {
           state.scoredFloors.add(k);
-          state.score += 1;
-          newPoints += 1;
+          const floorPoints = calculateHelixFloorScore(state.currentFloorActiveTime);
+          state.score += floorPoints;
+          totalFloorPointsGained += floorPoints;
+          lastFloorPoints = floorPoints;
+          newlyScoredCount++;
+
+          // Reset floor timer for subsequent floor (k + 1)
+          state.currentFloorActiveTime = 0;
+          state.activeFloorIndex = k + 1;
         }
       }
-      if (newPoints > 0) {
+
+      if (totalFloorPointsGained > 0) {
         onScoreChangeRef.current(state.score);
-        addFloatingScoreRef.current(`+${newPoints}`, '#38bdf8');
+        addFloatingScoreRef.current(`+${totalFloorPointsGained}`, '#38bdf8');
+      } else if (newlyScoredCount > 0 && lastFloorPoints === 0) {
+        // Floor cleared after >12 seconds (0 points awarded per scoring table)
+        addFloatingScoreRef.current('+0', '#94a3b8');
       }
     };
 
@@ -537,6 +555,11 @@ export const HelixJump3DCanvas: React.FC<HelixJump3DCanvasProps> = ({
       if (isPausedRef.current) {
         renderer.render(scene, camera);
         return;
+      }
+
+      // Monotonically accumulate active gameplay elapsed time on the current floor
+      if (!state.gameOverTriggered && !state.levelCompleteTriggered) {
+        state.currentFloorActiveTime += dt;
       }
 
       // Smooth inertia when not dragging

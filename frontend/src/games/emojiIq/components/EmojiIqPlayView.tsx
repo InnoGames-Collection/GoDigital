@@ -7,7 +7,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { EmojiIqQuestion, EmojiIqLevelConfig } from '../types';
 import { EmojiIqEquationCard } from './EmojiIqEquationCard';
 import { EMOJI_IQ_COLORS } from '../colors';
-import { Flame, Lightbulb, Sparkles } from 'lucide-react';
+import { Flame } from 'lucide-react';
 import { emojiIqAudio } from '../emojiIqAudio';
 
 interface EmojiIqPlayViewProps {
@@ -21,6 +21,7 @@ interface EmojiIqPlayViewProps {
   eliminatedOptionIndices: number[];
   onSelectAnswer: (optionIndex: number, timeRemainingSeconds: number) => void;
   onTimeExpired: () => void;
+  onAdvanceQuestion: () => void;
 }
 
 export const EmojiIqPlayView: React.FC<EmojiIqPlayViewProps> = ({
@@ -33,43 +34,98 @@ export const EmojiIqPlayView: React.FC<EmojiIqPlayViewProps> = ({
   eliminatedOptionIndices,
   onSelectAnswer,
   onTimeExpired,
+  onAdvanceQuestion,
 }) => {
   const [timeLeft, setTimeLeft] = useState<number>(question.timeLimitSeconds);
   const [selectedIdx, setSelectedIdx] = useState<number | null>(null);
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const [inlineFeedback, setInlineFeedback] = useState<{
+    state: 'CORRECT' | 'INCORRECT' | 'TIMEOUT';
+    selectedIdx: number | null;
+    correctIdx: number;
+  } | null>(null);
 
-  // Reset timer on question transition
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const advanceTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const lastTickedSecondRef = useRef<number | null>(null);
+  const answeredRef = useRef<boolean>(false);
+
+  // Reset timer & selection state on question transition
   useEffect(() => {
     setTimeLeft(question.timeLimitSeconds);
     setSelectedIdx(null);
+    setInlineFeedback(null);
+    lastTickedSecondRef.current = null;
+    answeredRef.current = false;
+    if (advanceTimerRef.current) clearTimeout(advanceTimerRef.current);
   }, [question.id, question.timeLimitSeconds]);
+
+  // Cleanup timers on unmount
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+      if (advanceTimerRef.current) clearTimeout(advanceTimerRef.current);
+    };
+  }, []);
 
   // Main countdown timer interval
   useEffect(() => {
     timerRef.current = setInterval(() => {
       setTimeLeft((prev) => {
-        if (prev <= 1) {
-          clearInterval(timerRef.current!);
-          onTimeExpired();
+        if (prev <= 0.1) {
+          if (timerRef.current) clearInterval(timerRef.current);
+          if (!answeredRef.current) {
+            answeredRef.current = true;
+            setInlineFeedback({
+              state: 'TIMEOUT',
+              selectedIdx: null,
+              correctIdx: question.correctIndex,
+            });
+            onTimeExpired();
+            advanceTimerRef.current = setTimeout(() => {
+              onAdvanceQuestion();
+            }, 900);
+          }
           return 0;
         }
-        if (prev <= 4) {
+
+        const nextVal = Math.round((prev - 0.1) * 10) / 10;
+        const intSecond = Math.ceil(nextVal);
+
+        // Tick only once per integer second between 1s and 3s
+        if (intSecond <= 3 && intSecond >= 1 && lastTickedSecondRef.current !== intSecond) {
+          lastTickedSecondRef.current = intSecond;
           emojiIqAudio.playTick();
         }
-        return Math.round((prev - 0.1) * 10) / 10;
+
+        return nextVal;
       });
     }, 100);
 
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
-  }, [question.id, onTimeExpired]);
+  }, [question.id, question.correctIndex, onTimeExpired, onAdvanceQuestion]);
 
   const handleChoose = (index: number) => {
-    if (selectedIdx !== null || eliminatedOptionIndices.includes(index)) return;
+    if (selectedIdx !== null || answeredRef.current || eliminatedOptionIndices.includes(index)) {
+      return;
+    }
+    answeredRef.current = true;
     setSelectedIdx(index);
     if (timerRef.current) clearInterval(timerRef.current);
+
+    const isCorrect = index === question.correctIndex;
+    setInlineFeedback({
+      state: isCorrect ? 'CORRECT' : 'INCORRECT',
+      selectedIdx: index,
+      correctIdx: question.correctIndex,
+    });
+
     onSelectAnswer(index, timeLeft);
+
+    advanceTimerRef.current = setTimeout(() => {
+      onAdvanceQuestion();
+    }, 850);
   };
 
   // Timer Bar calculation
@@ -115,7 +171,7 @@ export const EmojiIqPlayView: React.FC<EmojiIqPlayViewProps> = ({
           </div>
           <span
             className={`text-xs font-black min-w-[28px] text-right font-mono ${
-              timeLeft <= 3 ? 'text-[#FF5A67] font-extrabold animate-ping' : 'text-[#241F3D]'
+              timeLeft <= 3 ? 'text-[#FF5A67] font-extrabold animate-pulse' : 'text-[#241F3D]'
             }`}
           >
             {Math.ceil(timeLeft)}s
@@ -123,16 +179,37 @@ export const EmojiIqPlayView: React.FC<EmojiIqPlayViewProps> = ({
         </div>
       </div>
 
-      {/* Central Stage: The Equation Card Stack */}
+      {/* Central Stage: The Equation/Puzzle Card Stack */}
       <div className="w-full flex-1 flex flex-col items-center justify-center my-auto py-2">
-        <EmojiIqEquationCard equations={question.equations} />
+        <EmojiIqEquationCard question={question} equations={question.equations} />
 
-        {/* Diamond Accent Divider Below Equation Card */}
-        <div className="w-full max-w-xs flex items-center justify-center my-2 opacity-70">
-          <span className="text-xs" style={{ color: EMOJI_IQ_COLORS.primary }}>◇</span>
-          <div className="h-[2px] flex-1 bg-gradient-to-r from-transparent via-[#6C5CE7] to-transparent mx-1.5" />
-          <span className="text-xs" style={{ color: EMOJI_IQ_COLORS.primary }}>◇</span>
-        </div>
+        {/* Status Indicator / Accent Divider */}
+        {inlineFeedback ? (
+          <div className="w-full max-w-xs flex items-center justify-center my-2 animate-in fade-in zoom-in-95 duration-200">
+            {inlineFeedback.state === 'CORRECT' ? (
+              <div className="flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-emerald-500 text-white font-black text-xs sm:text-sm shadow-md animate-bounce">
+                <span>✓</span>
+                <span>CORRECT!</span>
+              </div>
+            ) : inlineFeedback.state === 'INCORRECT' ? (
+              <div className="flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-rose-500 text-white font-black text-xs sm:text-sm shadow-md">
+                <span>✕</span>
+                <span>NOT QUITE!</span>
+              </div>
+            ) : (
+              <div className="flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-amber-500 text-white font-black text-xs sm:text-sm shadow-md">
+                <span>⏰</span>
+                <span>TIME'S UP!</span>
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="w-full max-w-xs flex items-center justify-center my-2 opacity-70">
+            <span className="text-xs" style={{ color: EMOJI_IQ_COLORS.primary }}>◇</span>
+            <div className="h-[2px] flex-1 bg-gradient-to-r from-transparent via-[#6C5CE7] to-transparent mx-1.5" />
+            <span className="text-xs" style={{ color: EMOJI_IQ_COLORS.primary }}>◇</span>
+          </div>
+        )}
       </div>
 
       {/* Answer Options: 2x2 Grid with high-contrast tactile styling */}
@@ -140,22 +217,46 @@ export const EmojiIqPlayView: React.FC<EmojiIqPlayViewProps> = ({
         {question.options.map((option, idx) => {
           const isEliminated = eliminatedOptionIndices.includes(idx);
           const isSelected = selectedIdx === idx;
+          const isLongString = typeof option === 'string' && option.length > 6;
+
+          let buttonStyle =
+            'bg-white border-2 border-[#6C5CE7]/30 border-b-[5px] border-b-[#6C5CE7] active:border-b-2 active:translate-y-1 shadow-md hover:border-[#6C5CE7] hover:scale-[1.02] text-[#241F3D]';
+
+          if (isEliminated) {
+            buttonStyle =
+              'opacity-25 grayscale cursor-not-allowed bg-slate-200 border-b-2 border-slate-300 text-slate-400 line-through';
+          } else if (inlineFeedback) {
+            if (idx === question.correctIndex) {
+              buttonStyle =
+                'bg-emerald-500 border-2 border-emerald-600 border-b-[5px] border-b-emerald-700 text-white shadow-lg scale-[1.03] ring-2 ring-emerald-300';
+            } else if (isSelected && inlineFeedback.state === 'INCORRECT') {
+              buttonStyle =
+                'bg-rose-500 border-2 border-rose-600 border-b-[4px] border-b-rose-700 text-white shadow-inner scale-95 opacity-90';
+            } else {
+              buttonStyle = 'opacity-30 bg-slate-100 border-slate-200 text-slate-400';
+            }
+          } else if (isSelected) {
+            buttonStyle =
+              'bg-[#00B8D9] border-b-2 border-[#0094b0] translate-y-1 shadow-inner text-white scale-98';
+          }
 
           return (
             <button
               key={idx}
               onClick={() => handleChoose(idx)}
-              disabled={isEliminated || selectedIdx !== null}
-              className={`group relative flex items-center justify-center py-3.5 sm:py-4 rounded-2xl font-black text-center transition-all ${
-                isEliminated
-                  ? 'opacity-25 grayscale cursor-not-allowed bg-slate-200 border-b-2 border-slate-300 text-slate-400 line-through'
-                  : isSelected
-                  ? 'bg-[#00B8D9] border-b-2 border-[#0094b0] translate-y-1 shadow-inner text-white scale-98'
-                  : 'bg-white border-2 border-[#6C5CE7]/30 border-b-[5px] border-b-[#6C5CE7] active:border-b-2 active:translate-y-1 shadow-md hover:border-[#6C5CE7] hover:scale-[1.02] text-[#241F3D]'
-              }`}
+              disabled={isEliminated || selectedIdx !== null || inlineFeedback !== null}
+              className={`group relative flex items-center justify-center py-3.5 sm:py-4 px-2.5 rounded-2xl font-black text-center transition-all ${buttonStyle}`}
             >
-              <span className="font-['Fredoka',sans-serif] text-xl sm:text-2xl font-black font-mono tracking-wide drop-shadow-sm">
-                {option}
+              <span
+                className={`font-['Fredoka',sans-serif] font-black tracking-wide drop-shadow-sm flex items-center justify-center gap-1.5 ${
+                  isLongString
+                    ? 'text-xs sm:text-sm leading-tight text-center break-words'
+                    : 'text-xl sm:text-2xl font-mono'
+                }`}
+              >
+                {inlineFeedback && idx === question.correctIndex && <span>✓</span>}
+                {inlineFeedback && isSelected && inlineFeedback.state === 'INCORRECT' && <span>✕</span>}
+                <span>{option}</span>
               </span>
             </button>
           );

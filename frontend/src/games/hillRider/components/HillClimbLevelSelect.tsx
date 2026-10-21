@@ -156,10 +156,9 @@ export const HillClimbLevelSelect: React.FC<HillClimbLevelSelectProps> = ({
                 )}
               </div>
 
-              {/* Level Name */}
+              {/* Level Number */}
               <div className="my-1">
-                <div className="text-xs font-bold text-slate-200 truncate">{lvl.name}</div>
-                <div className="text-[10px] text-slate-400 truncate">{lvl.amharicTitle}</div>
+                <div className="text-sm font-black text-slate-100 tracking-wide">Level {lvl.levelNumber}</div>
               </div>
 
               {/* Tier & Target Distance */}

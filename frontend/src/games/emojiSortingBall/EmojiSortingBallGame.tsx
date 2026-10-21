@@ -255,16 +255,38 @@ export const EmojiSortingBallGame: React.FC<EmojiSortingBallGameProps> = ({
     }
   };
 
+  // Synchronize board initialization when entering PLAYING mode
+  useEffect(() => {
+    if (gameState === 'PLAYING') {
+      const lvl = currentLevelNumber || progress.unlockedLevel || 1;
+      const config = EMOJI_SORTING_LEVELS.find((l) => l.level === lvl) || EMOJI_SORTING_LEVELS[0];
+      const cloned = config.tubes.map((t) => [...t]);
+      if (currentTubes.length === 0) {
+        setCurrentTubes(cloned);
+      }
+      requestAnimationFrame(() => {
+        if (renderer3DRef.current) {
+          renderer3DRef.current.resize();
+          renderer3DRef.current.setLevelState(
+            currentTubes.length > 0 ? currentTubes : cloned,
+            null,
+            1
+          );
+        }
+      });
+    }
+  }, [gameState]);
+
   /**
-   * Add 1 Extra Empty Buffer Tube
+   * Add 1 Extra Empty Buffer Tube (Strictly maximum 1 per active level attempt)
    * Penalty: -250 PTS
    */
   const handleAddExtraTube = () => {
-    if (extraTubesAdded >= 2 || gameState !== 'PLAYING' || isAnimating) return;
+    if (extraTubesAdded >= 1 || gameState !== 'PLAYING' || isAnimating) return;
     emojiSortingAudio.playButton();
     const updated = [...currentTubes, []];
     setCurrentTubes(updated);
-    setExtraTubesAdded((prev) => prev + 1);
+    setExtraTubesAdded(1);
 
     // Update lifetime stats
     saveProgress({
@@ -769,218 +791,114 @@ export const EmojiSortingBallGame: React.FC<EmojiSortingBallGameProps> = ({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex flex-col justify-between overflow-hidden select-none font-['Plus_Jakarta_Sans',sans-serif] text-slate-800"
+      className="fixed inset-0 z-50 flex flex-col justify-between overflow-hidden select-none font-['Plus_Jakarta_Sans',sans-serif]"
       style={{
-        background: `
-          radial-gradient(circle at 18% 12%, #FFE8E8 0%, transparent 48%),
-          radial-gradient(circle at 82% 16%, #E8F6FF 0%, transparent 45%),
-          radial-gradient(circle at 50% 45%, #F7EFFF 0%, transparent 60%),
-          radial-gradient(circle at 15% 85%, #E7F9F3 0%, transparent 50%),
-          radial-gradient(circle at 85% 88%, #FFE8E8 0%, transparent 45%),
-          #FAF7FD
-        `,
+        backgroundColor: '#F3E9D8',
+        color: '#40372F',
       }}
     >
       {/* ===================================================================
-          1. IN-GAME TOURNAMENT APP BAR (Visible during PLAYING)
+          1. IN-GAME TOURNAMENT APP BAR (Strictly 6 items in exact order)
+             1. Back, 2. Time, 3. Sound, 4. Moves, 5. Undo, 6. Add Tube
          =================================================================== */}
       {gameState === 'PLAYING' && (
-        <header className="w-full h-14 sm:h-15 bg-white/80 backdrop-blur-md flex items-center justify-between px-3 sm:px-6 border-b border-purple-100/80 z-30 shrink-0 shadow-xs">
-          {/* Left: [ BACK TO MENU ] Button */}
+        <header
+          className="w-full h-14 sm:h-16 flex items-center justify-between px-3 sm:px-6 border-b border-[#D4C3AA] z-30 shrink-0 shadow-xs"
+          style={{ backgroundColor: '#F3E9D8' }}
+        >
+          {/* Left: Primary controls (Back, Time, Sound) */}
           <div className="flex items-center gap-2 sm:gap-3">
+            {/* 1. Back */}
             <button
               onClick={() => {
                 emojiSortingAudio.playButton();
                 setGameState('MENU');
               }}
-              className="px-3 py-1.5 rounded-xl bg-white hover:bg-slate-50 active:scale-95 text-slate-700 flex items-center gap-1.5 transition-all cursor-pointer border border-purple-100 shadow-xs"
-              title="Return to Main Menu"
-              aria-label="Return to Main Menu"
+              className="px-3 py-1.5 rounded-xl bg-[#E6D8C3] hover:bg-[#d8c8b0] active:scale-95 text-[#40372F] flex items-center gap-1.5 transition-all cursor-pointer border border-[#D4C3AA] shadow-xs text-xs font-bold"
+              title="Return to Menu"
+              aria-label="Back to Menu"
             >
-              <ArrowLeft className="w-4 h-4 text-violet-600" />
-              <span className="text-xs font-black uppercase tracking-wider">
-                MENU
-              </span>
+              <ArrowLeft className="w-4 h-4 text-[#40372F]" />
+              <span className="font-bold uppercase tracking-wider">Back</span>
             </button>
 
-            {/* Level Badge */}
-            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-violet-50 border border-violet-200">
-              <span className="text-[11px] font-black text-violet-700 font-mono uppercase">
-                LVL {currentLevelNumber} / {TOTAL_EMOJI_SORTING_LEVELS}
-              </span>
-            </div>
-          </div>
-
-          {/* Center: Live Timer & Level Score */}
-          <div className="flex items-center gap-2">
-            <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/90 border border-slate-200 text-slate-700 font-mono text-xs shadow-xs">
-              <Clock className="w-3.5 h-3.5 text-pink-500" />
+            {/* 2. Time */}
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#E6D8C3] border border-[#D4C3AA] text-[#40372F] font-mono text-xs font-bold shadow-xs">
+              <Clock className="w-3.5 h-3.5 text-[#786B5B]" />
               <span>{formatTime(elapsedSeconds)}</span>
             </div>
 
-            <div className="hidden sm:flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-50/90 border border-amber-200 text-amber-800 font-mono text-xs shadow-xs">
-              <Flame className="w-3.5 h-3.5 fill-amber-500 text-amber-500" />
-              <span>{currentScore.toLocaleString()} PTS</span>
-            </div>
-          </div>
-
-          {/* Right: Demo Video, Sound, Fullscreen, Exit */}
-          <div className="flex items-center gap-1.5">
-            {/* Demo Video */}
-            <button
-              onClick={() => {
-                emojiSortingAudio.playButton();
-                setIsVideoModalOpen(true);
-              }}
-              className="w-8.5 h-8.5 rounded-xl bg-white hover:bg-slate-50 active:scale-95 text-slate-600 hover:text-slate-900 flex items-center justify-center transition-all cursor-pointer border border-purple-100 shadow-xs"
-              title="Demo Video"
-              aria-label="Demo Video"
-            >
-              <Film className="w-4 h-4 text-amber-500" />
-            </button>
-
-            {/* Sound Toggle */}
+            {/* 3. Sound */}
             <button
               onClick={() => setSoundActive(!soundActive)}
-              className="w-8.5 h-8.5 rounded-xl bg-white hover:bg-slate-50 active:scale-95 text-slate-600 hover:text-slate-900 flex items-center justify-center transition-all cursor-pointer border border-purple-100 shadow-xs"
+              className="w-8.5 h-8.5 rounded-xl bg-[#E6D8C3] hover:bg-[#d8c8b0] active:scale-95 text-[#40372F] flex items-center justify-center transition-all cursor-pointer border border-[#D4C3AA] shadow-xs"
               aria-label="Toggle Sound"
+              title="Toggle Sound"
             >
               {soundActive ? (
-                <Volume2 className="w-4 h-4 text-violet-600" />
+                <Volume2 className="w-4 h-4 text-[#40372F]" />
               ) : (
-                <VolumeX className="w-4 h-4 text-slate-400" />
+                <VolumeX className="w-4 h-4 text-[#786B5B]" />
               )}
             </button>
+          </div>
 
-            {/* Fullscreen */}
-            <button
-              onClick={toggleFullscreen}
-              className="w-8.5 h-8.5 rounded-xl bg-white hover:bg-slate-50 active:scale-95 text-slate-600 hover:text-slate-900 flex items-center justify-center transition-all cursor-pointer border border-purple-100 shadow-xs"
-              aria-label="Toggle Fullscreen"
-            >
-              {isFullscreen ? (
-                <Minimize2 className="w-4 h-4 text-slate-600" />
-              ) : (
-                <Maximize2 className="w-4 h-4 text-slate-600" />
-              )}
-            </button>
+          {/* Right: Gameplay actions (Moves, Undo, Add Tube) */}
+          <div className="flex items-center gap-2 sm:gap-3">
+            {/* 4. Moves */}
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#E6D8C3] border border-[#D4C3AA] text-[#40372F] font-mono text-xs font-bold shadow-xs">
+              <span className="text-[#786B5B] text-[10px] font-sans uppercase font-bold">Moves</span>
+              <span>{movesCount}</span>
+            </div>
 
-            {/* Exit Game */}
+            {/* 5. Undo */}
+            <div className="relative">
+              <button
+                onClick={handleUndo}
+                disabled={moveHistory.length === 0 || undosRemaining <= 0 || isAnimating}
+                className={`px-3 py-1.5 rounded-xl bg-[#E6D8C3] hover:bg-[#d8c8b0] active:scale-95 text-[#40372F] flex items-center gap-1.5 text-xs font-bold transition-all cursor-pointer border border-[#D4C3AA] shadow-xs ${
+                  moveHistory.length === 0 || undosRemaining <= 0 || isAnimating
+                    ? 'opacity-40 cursor-not-allowed'
+                    : ''
+                }`}
+                aria-label="Undo Move"
+                title={`Undo (${undosRemaining} left)`}
+              >
+                <Undo2 className="w-4 h-4 text-[#40372F] stroke-[2.2]" />
+                <span className="hidden sm:inline">Undo</span>
+                <span className="text-[10px] font-mono bg-[#D4C3AA] text-[#40372F] px-1.5 py-0.2 rounded-full font-bold">
+                  {undosRemaining}
+                </span>
+              </button>
+            </div>
+
+            {/* 6. Add Tube (Strictly maximum 1 per attempt) */}
             <button
-              onClick={handleExitGame}
-              className="w-8.5 h-8.5 rounded-xl bg-rose-50 hover:bg-rose-100 hover:text-rose-700 active:scale-95 text-rose-500 flex items-center justify-center transition-all cursor-pointer border border-rose-200 shadow-xs"
-              aria-label="Exit Game"
+              onClick={handleAddExtraTube}
+              disabled={extraTubesAdded >= 1 || isAnimating}
+              className={`px-3 py-1.5 rounded-xl flex items-center gap-1.5 text-xs font-bold transition-all border shadow-xs ${
+                extraTubesAdded >= 1
+                  ? 'opacity-40 cursor-not-allowed bg-[#E6D8C3] border-[#D4C3AA] text-[#786B5B]'
+                  : 'bg-[#D58A36] hover:bg-[#c47b2c] active:scale-95 text-white border-[#b87024] cursor-pointer'
+              }`}
+              aria-label="Add Extra Buffer Tube (-250 PTS)"
+              title={extraTubesAdded >= 1 ? 'Extra tube already added (Max 1 per attempt)' : 'Add 1 Tube (-250 PTS)'}
             >
-              <X className="w-4 h-4" />
+              <Plus className="w-4 h-4 stroke-[2.5]" />
+              <span>Tube</span>
+              {extraTubesAdded >= 1 && <span className="text-[10px] font-mono opacity-80">(1/1)</span>}
             </button>
           </div>
         </header>
       )}
 
       {/* ===================================================================
-          2. PUZZLE ARENA (3D Canvas + In-Game HUD Controls)
+          2. PUZZLE ARENA (3D Canvas)
          =================================================================== */}
-      <main className="relative flex-1 w-full flex flex-col overflow-hidden bg-transparent">
-        {/* Background Decorative Faint Silhouettes & Soft Glows */}
-        <div className="absolute inset-0 pointer-events-none overflow-hidden select-none">
-          <div className="absolute top-[8%] left-[20%] w-72 h-72 rounded-full bg-purple-200/35 blur-3xl" />
-          <div className="absolute top-[35%] right-[15%] w-80 h-80 rounded-full bg-pink-200/30 blur-3xl" />
-          <div className="absolute bottom-[10%] left-[25%] w-80 h-80 rounded-full bg-teal-200/30 blur-3xl" />
-
-          {/* Faint subtle emoji silhouettes in background */}
-          <span className="absolute top-[18%] left-[6%] text-8xl opacity-[0.04] blur-[0.5px]">⭐</span>
-          <span className="absolute top-[28%] right-[8%] text-8xl opacity-[0.04] blur-[0.5px]">🎈</span>
-          <span className="absolute bottom-[22%] left-[8%] text-8xl opacity-[0.04] blur-[0.5px]">🌟</span>
-          <span className="absolute bottom-[18%] right-[6%] text-8xl opacity-[0.04] blur-[0.5px]">💎</span>
-        </div>
-
-        {/* IN-GAME SECONDARY HUD BAR (Moves, Par, Undo, Hint, Add Buffer Tube) */}
-        {gameState === 'PLAYING' && (
-          <div className="w-full max-w-xl mx-auto px-4 pt-3 pb-1 flex items-center justify-between z-20 pointer-events-auto">
-            {/* Left: Restart */}
-            <div className="flex items-center gap-2">
-              <button
-                onClick={handleReset}
-                className="w-10 h-10 rounded-xl bg-white/90 hover:bg-white active:scale-95 text-slate-700 hover:text-slate-900 flex items-center justify-center border border-purple-100 hover:border-violet-300 transition-all cursor-pointer shadow-xs"
-                aria-label="Restart Level"
-                title="Restart Level"
-              >
-                <RotateCcw className="w-4.5 h-4.5 stroke-[2.2]" />
-              </button>
-            </div>
-
-            {/* Center: Moves & Par Pill */}
-            <button
-              onClick={() => setGameState('LEVEL_SELECT')}
-              className="flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-white/90 border border-purple-100 hover:border-violet-300 backdrop-blur-md shadow-xs active:scale-98 transition-all cursor-pointer"
-              title="Choose Level"
-            >
-              <div className="flex items-center gap-2 text-xs font-mono font-medium">
-                <span className="text-slate-500">
-                  Moves:{' '}
-                  <strong className="text-slate-800 font-mono font-bold">
-                    {movesCount}
-                  </strong>
-                </span>
-                <span className="text-slate-300">•</span>
-                <span className="text-violet-700 font-mono font-semibold">
-                  Par: {currentConfig.optimalMoves}
-                </span>
-              </div>
-            </button>
-
-            {/* Right: Hint, Undo & Add Extra Tube */}
-            <div className="flex items-center gap-2">
-              {/* Hint Button */}
-              <button
-                onClick={handleRequestHint}
-                className="w-10 h-10 rounded-xl bg-white/90 hover:bg-amber-50 active:scale-95 text-amber-600 flex items-center justify-center border border-amber-200 hover:border-amber-300 transition-all cursor-pointer shadow-xs"
-                aria-label="Request Hint (-150 PTS)"
-                title="Hint (-150 PTS)"
-              >
-                <Lightbulb className="w-4.5 h-4.5" />
-              </button>
-
-              {/* Undo Button with Remaining Badge */}
-              <div className="relative">
-                <button
-                  onClick={handleUndo}
-                  disabled={moveHistory.length === 0 || undosRemaining <= 0 || isAnimating}
-                  className={`w-10 h-10 rounded-xl bg-white/90 hover:bg-purple-50 active:scale-95 text-violet-700 flex items-center justify-center border border-purple-100 hover:border-violet-300 transition-all cursor-pointer shadow-xs ${
-                    moveHistory.length === 0 || undosRemaining <= 0
-                      ? 'opacity-40 cursor-not-allowed'
-                      : ''
-                  }`}
-                  aria-label="Undo Move"
-                  title="Undo Move"
-                >
-                  <Undo2 className="w-4.5 h-4.5 stroke-[2.2]" />
-                </button>
-
-                <div className="absolute -bottom-1 -left-1 px-1.5 py-0.2 rounded-full bg-violet-600 border border-white text-[9px] font-black text-white shadow-xs">
-                  {undosRemaining}
-                </div>
-              </div>
-
-              {/* Extra Tube Button (+1) */}
-              <button
-                onClick={handleAddExtraTube}
-                disabled={extraTubesAdded >= 2}
-                className={`w-10 h-10 rounded-xl bg-white/90 hover:bg-emerald-50 active:scale-95 text-emerald-700 flex items-center justify-center border border-emerald-200 hover:border-emerald-300 transition-all cursor-pointer shadow-xs ${
-                  extraTubesAdded >= 2 ? 'opacity-40 cursor-not-allowed' : ''
-                }`}
-                aria-label="Add Extra Buffer Tube (-250 PTS)"
-                title="Add 1 Tube (-250 PTS)"
-              >
-                <div className="flex items-center text-emerald-600">
-                  <span className="text-xs font-bold font-mono">1+</span>
-                  <Plus className="w-3.5 h-3.5 stroke-[2.5] -ml-0.5" />
-                </div>
-              </button>
-            </div>
-          </div>
-        )}
-
+      <main
+        className="relative flex-1 w-full flex flex-col overflow-hidden"
+        style={{ backgroundColor: '#F3E9D8' }}
+      >
         {/* Live Score Gain / Penalty Floating Notification */}
         {lastScoreGain && (
           <div className="absolute top-16 left-1/2 -translate-x-1/2 z-30 pointer-events-none animate-in fade-in slide-in-from-bottom-2 duration-200">
@@ -1024,7 +942,16 @@ export const EmojiSortingBallGame: React.FC<EmojiSortingBallGameProps> = ({
           progress={progress}
           onPlay={() => {
             emojiSortingAudio.playButton();
+            const lvlToPlay = progress.unlockedLevel || 1;
+            loadLevel(lvlToPlay);
             setGameState('PLAYING');
+            requestAnimationFrame(() => {
+              if (renderer3DRef.current) {
+                renderer3DRef.current.resize();
+                const config = EMOJI_SORTING_LEVELS.find((l) => l.level === lvlToPlay) || EMOJI_SORTING_LEVELS[0];
+                renderer3DRef.current.setLevelState(config.tubes.map((t) => [...t]), null, 1);
+              }
+            });
           }}
           onOpenLevels={() => {
             emojiSortingAudio.playButton();

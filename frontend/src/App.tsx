@@ -98,7 +98,12 @@ export default function App() {
   useEffect(() => {
     let unsubscribe: (() => void) | null = null;
     const loadAndSubscribe = async () => {
-      const userPhone = profile?.phoneNumber || '0911223344';
+      if (!profile?.phoneNumber) {
+        setNotifications([]);
+        setUnreadNotificationsCount(0);
+        return;
+      }
+      const userPhone = profile.phoneNumber;
       const initial = await notificationService.fetchNotifications(userPhone);
       setNotifications(initial.notifications);
       setUnreadNotificationsCount(initial.unreadCount);
@@ -187,8 +192,9 @@ export default function App() {
   const handleMarkAllNotificationsRead = async () => {
     setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
     setUnreadNotificationsCount(0);
-    const userPhone = profile?.phoneNumber || '0911223344';
-    await notificationService.markAllAsRead(userPhone);
+    if (profile?.phoneNumber) {
+      await notificationService.markAllAsRead(profile.phoneNumber);
+    }
   };
 
   const handleNotificationAction = (url: string) => {

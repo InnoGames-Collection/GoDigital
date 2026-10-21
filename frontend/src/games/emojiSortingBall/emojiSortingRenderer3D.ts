@@ -912,6 +912,21 @@ export class EmojiSortingRenderer3D {
     this.resizeObserver.observe(this.container);
   }
 
+  public resize() {
+    if (!this.container || !this.renderer || !this.camera) return;
+    const width = this.container.clientWidth || 400;
+    const height = this.container.clientHeight || 600;
+    if (width <= 0 || height <= 0) return;
+    const aspect = width / height;
+    this.camera.aspect = aspect;
+    this.updateCameraForAspect(aspect, this.currentTubes.length);
+    this.renderer.setSize(width, height, false);
+    this.calculateTubeLayout();
+    this.rebuildArenaFloor();
+    this.rebuildTubes();
+    this.rebuildBalls();
+  }
+
   /**
    * Clean disposal
    */

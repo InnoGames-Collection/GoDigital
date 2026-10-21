@@ -2,6 +2,7 @@ import { FastifyInstance } from 'fastify';
 import { pool, query } from '../config/database.js';
 import { requireAuth, optionalAuth } from '../middleware/auth.js';
 import { walletService } from '../services/walletService.js';
+import { GameAntiCheat } from '../services/gameAntiCheat.js';
 
 export async function tournamentRoutes(fastify: FastifyInstance) {
   // Get active tournaments (root or /active)
@@ -149,14 +150,35 @@ export async function tournamentRoutes(fastify: FastifyInstance) {
     });
   });
 
-  // Submit tournament score
+  // Submit tournament score (Secured with Anti-Cheat validation)
   fastify.post('/:id/submit', { preHandler: [requireAuth] }, async (req, reply) => {
     const { id } = req.params as { id: string };
     const userId = req.user!.userId;
     const phone = req.user!.phone;
-    const { score, gameId } = (req.body || {}) as { score: number; gameId?: string };
+    const { score, gameId, durationSeconds } = (req.body || {}) as { score: number; gameId?: string; durationSeconds?: number };
+
+    // 1. Verify tournament exists and is active
+    const tournRes = await query(`SELECT * FROM tournaments WHERE id = $1`, [id]);
+    if (tournRes.rowCount === 0) {
+      return reply.status(404).send({ success: false, error: 'Tournament not found' });
+    }
+    const tournament = tournRes.rows[0];
+    if (tournament.status !== 'ACTIVE') {
+      return reply.status(400).send({ success: false, error: `Tournament is not active (status: ${tournament.status})` });
+    }
 
     const validScore = Math.max(0, parseInt(score as any, 10) || 0);
+    const targetGameId = gameId || tournament.game_id;
+
+    // 2. Anti-cheat score verification
+    const antiCheatCheck = await GameAntiCheat.validateScore(targetGameId, validScore, durationSeconds || 5);
+    if (!antiCheatCheck.valid) {
+      fastify.log.warn(`[Tournament Anti-Cheat] Fraudulent score detected: ${validScore} for user ${phone} on ${targetGameId}. Reason: ${antiCheatCheck.reason}`);
+      return reply.status(400).send({
+        success: false,
+        error: antiCheatCheck.reason || 'Score rejected: Exceeds anti-cheat security thresholds.',
+      });
+    }
 
     const maskedPhone = phone.length >= 7 
       ? `${phone.substring(0, 3)}****${phone.slice(-3)}` 

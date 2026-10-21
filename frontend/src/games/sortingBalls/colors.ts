@@ -95,3 +95,13 @@ export const BALL_COLORS: Record<BallColorKey, BallColorDefinition> = {
     shadowHex: '#1E293B',
   },
 };
+
+export const SORTING_PALETTE = {
+  bgPrimary: '#F3E9D8',      // Warm Ivory / Soft Sand
+  bgCard: '#E6D8C3',         // Soft Beige
+  textPrimary: '#40372F',    // Warm Dark Brown
+  textMuted: '#786B5B',      // Muted Brown
+  divider: '#D4C3AA',        // Soft divider
+  accentAmber: '#D58A36',    // Warm Amber
+  sageSuccess: '#648B75',    // Sage Green
+};

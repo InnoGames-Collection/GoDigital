@@ -30,7 +30,12 @@ export type PuzzleType =
   | 'TYPE_I_VISUAL_DIFFERENCE'
   | 'TYPE_J_MULTIPLE_UNKNOWNS'
   | 'TYPE_K_FAST_CALCULATION'
-  | 'TYPE_L_EXPERT_MULTI_STEP';
+  | 'TYPE_L_EXPERT_MULTI_STEP'
+  | 'TYPE_M_EMOJI_SEQUENCE'
+  | 'TYPE_N_PATTERN_MISSING'
+  | 'TYPE_O_ODD_ONE_OUT'
+  | 'TYPE_P_EMOJI_COMBINATION'
+  | 'TYPE_Q_EMOJI_LOGIC_ANALOGY';
 
 /**
  * A single equation row in the puzzle.
@@ -45,7 +50,7 @@ export interface EquationItem {
 
 export interface EquationRow {
   items: (EquationItem | string)[]; // alternating item and operator e.g. [item1, '+', item2]
-  result: number | '?'; // number for clues, '?' for the final puzzle row
+  result?: number | string; // number for clues, '?' for final puzzle row, or string/emoji
 }
 
 export interface EmojiIqQuestion {
@@ -54,16 +59,17 @@ export interface EmojiIqQuestion {
   questionIndex: number;
   type: PuzzleType;
   title?: string;
+  promptText?: string;
   difficulty: QuestionDifficulty;
   equations: EquationRow[];
-  options: number[]; // exactly 4 plausible choices
-  correctAnswer: number;
+  options: (number | string)[]; // exactly 4 plausible choices
+  correctAnswer: number | string;
   correctIndex: number; // 0, 1, 2, 3
   basePoints: number; // 40-80 (Easy), 70-130 (Med), 100-180 (Hard), 150-250 (Expert)
   timeLimitSeconds: number; // 15s to 7s
   hintText: string;
   explanation: string;
-  emojiValues: Record<string, number>;
+  emojiValues?: Record<string, number>;
 }
 
 export interface EmojiIqLevelConfig {
@@ -74,7 +80,7 @@ export interface EmojiIqLevelConfig {
   targetScore: number;
   questionCount: number; // 10 to 12
   theme: string;
-  rewardCoins: number;
+  rewardCoins?: number;
 }
 
 export interface TournamentScoreCalculation {
@@ -113,9 +119,9 @@ export interface EmojiIqPlayerStats {
   perfectCount: number;
   bestCombo: number;
   hintsUsed: number;
-  coins: number;
+  coins?: number;
   availableHints: number;
-  lives: number;
+  lives?: number;
   starsByLevel: Record<number, number>;
   highScoreByLevel: Record<number, number>;
 }

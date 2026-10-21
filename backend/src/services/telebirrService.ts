@@ -1,6 +1,6 @@
 import { env } from '../config/env.js';
 import { query, getClient } from '../config/database.js';
-import { computeHmacSha256 } from '../utils/crypto.js';
+import { computeHmacSha256, timingSafeEqual } from '../utils/crypto.js';
 import { subscriptionService } from './subscriptionService.js';
 import { walletService } from './walletService.js';
 import { NotificationService } from './notificationService.js';
@@ -85,6 +85,22 @@ export const telebirrService = {
         }).catch(() => {});
       }
 
+      if (params.itemType === 'ENERGY_PACK') {
+        await query(
+          `UPDATE profiles SET energy = max_energy, last_energy_refill_at = NOW() WHERE id = $1`,
+          [params.userId]
+        );
+
+        NotificationService.createNotification({
+          phone: params.phone,
+          type: 'SYSTEM',
+          title: '⚡ Energy Restored',
+          message: 'Your energy hearts have been fully recharged via TeleBirr.',
+          action_url: 'games',
+          action_label: 'Play Games',
+        }).catch(() => {});
+      }
+
       return {
         orderId,
         sandbox: true,
@@ -148,7 +164,7 @@ export const telebirrService = {
         .map((k) => `${k}=${payload[k]}`)
         .join('&');
       const expectedSign = computeHmacSha256(verifyKeys, env.TELEBIRR_APP_KEY);
-      if (sign !== expectedSign) {
+      if (!timingSafeEqual(sign, expectedSign)) {
         console.warn(`[Telebirr Webhook Security] Invalid HMAC signature for order: ${outTradeNo}`);
         return { success: false, statusCode: 403, message: 'Forbidden: Invalid signature verification failed.' };
       }
@@ -221,6 +237,11 @@ export const telebirrService = {
             ? 'weekly'
             : 'daily';
           await subscriptionService.activatePlanForUser(order.user_id, plan);
+        } else if (order.item_type === 'ENERGY_PACK') {
+          await client.query(
+            `UPDATE profiles SET energy = max_energy, last_energy_refill_at = NOW() WHERE id = $1`,
+            [order.user_id]
+          );
         }
 
         await client.query('COMMIT');

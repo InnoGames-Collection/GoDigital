@@ -58,7 +58,7 @@ export const HillClimbLeaderboard: React.FC<HillClimbLeaderboardProps> = ({
           </div>
           <div>
             <div className="text-xs font-black text-white">
-              Level {selectedLevel}: {currentLevelConfig.name}
+              Level {selectedLevel}
             </div>
             <div className="text-[10px] text-slate-400 font-medium">
               {currentLevelConfig.tier} • Target: {currentLevelConfig.targetDistance}m
@@ -75,7 +75,7 @@ export const HillClimbLeaderboard: React.FC<HillClimbLeaderboardProps> = ({
           >
             {HILL_CLIMB_LEVELS.map((lvl) => (
               <option key={lvl.levelNumber} value={lvl.levelNumber}>
-                Level {lvl.levelNumber} - {lvl.name}
+                Level {lvl.levelNumber}
               </option>
             ))}
           </select>

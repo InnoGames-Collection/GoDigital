@@ -45,9 +45,7 @@ export const DEFAULT_PLAYER_STATS: EmojiIqPlayerStats = {
   perfectCount: 0,
   bestCombo: 0,
   hintsUsed: 0,
-  coins: 50,
   availableHints: 3,
-  lives: 3,
   starsByLevel: {},
   highScoreByLevel: {},
 };
@@ -134,7 +132,7 @@ export class EmojiIqLeaderboardService {
     levelScore: number,
     accuracy: number,
     levelBestCombo: number,
-    rewardCoins: number,
+    _rewardCoins: number = 0,
     perfectAnswers: number = 0
   ): EmojiIqPlayerStats {
     const stats = this.loadPlayerStats();
@@ -168,14 +166,8 @@ export class EmojiIqLeaderboardService {
       stats.bestCombo = levelBestCombo;
     }
 
-    // 6. Reward coins
-    stats.coins += rewardCoins;
-
-    // 7. Perfect answers
+    // 6. Perfect answers
     stats.perfectCount += perfectAnswers;
-
-    // 8. Restore lives to 3 for next level
-    stats.lives = 3;
 
     this.savePlayerStats(stats);
     return stats;

@@ -157,7 +157,8 @@ function buildAll40Levels(): LevelDefinition[] {
     ];
 
     const title = titles[lvl - 1] || `Level ${lvl}`;
-    const baseScore = ringCount * 60;
+    // Score thresholds scaled to fair 0-5 pt time-based floor progression
+    const baseScore = Math.max(1, Math.round(ringCount * 1.5));
 
     levels.push({
       id: lvl,
@@ -169,8 +170,8 @@ function buildAll40Levels(): LevelDefinition[] {
       rings,
       starThresholds: [
         baseScore,
-        Math.round(baseScore * 1.6),
-        Math.round(baseScore * 2.4),
+        Math.round(ringCount * 3.0),
+        Math.round(ringCount * 4.2),
       ],
     });
   }

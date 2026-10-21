@@ -111,16 +111,37 @@ let cachedTotalParticipants = 5;
 let isSyncingTournaments = false;
 
 const maskPhoneNumber = (phone?: string): string => {
-  const digits = (phone || '0911428890').replace(/\D/g, '');
-  if (digits.length >= 9) {
+  if (!phone) return 'Player';
+  const digits = phone.replace(/\D/g, '');
+  if (digits.length >= 7) {
     const start = digits.slice(0, 3);
     const end = digits.slice(-3);
     return `${start}*****${end}`;
   }
-  return '091*****890';
+  return 'Player';
 };
 
+const listeners = new Set<() => void>();
+
 export const TournamentService = {
+  /**
+   * Subscribe to tournament data synchronization events
+   */
+  subscribe(listener: () => void): () => void {
+    listeners.add(listener);
+    return () => {
+      listeners.delete(listener);
+    };
+  },
+
+  notifyListeners(): void {
+    listeners.forEach((listener) => {
+      try {
+        listener();
+      } catch {}
+    });
+  },
+
   /**
    * Asynchronously synchronize active tournament and live leaderboard from PostgreSQL
    */
@@ -150,6 +171,7 @@ export const TournamentService = {
         if (typeof activeTourn.total_participants === 'number') {
           cachedTotalParticipants = activeTourn.total_participants;
         }
+        this.notifyListeners();
       }
     } catch (e) {
       console.warn('[TournamentService] Failed to sync tournaments with backend:', e);

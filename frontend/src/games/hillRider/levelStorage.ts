@@ -223,7 +223,7 @@ export const HillClimbStorage = {
       entries.splice(userRank - 1, 0, {
         rank: userRank,
         playerName: profile?.displayName || 'You',
-        playerMasked: maskPhone(profile?.phoneNumber || '0911000000'),
+        playerMasked: profile?.phoneNumber ? maskPhone(profile.phoneNumber) : 'Guest',
         score: userScore,
         stars: userRecord?.stars || 1,
         isCurrentUser: true,
@@ -237,7 +237,7 @@ export const HillClimbStorage = {
 
     return {
       levelNumber,
-      levelName: levelConfig.name,
+      levelName: `Level ${levelConfig.levelNumber}`,
       tier: levelConfig.tier,
       entries: entries.slice(0, 10),
       userRank: userScore > 0 ? userRank : 64,

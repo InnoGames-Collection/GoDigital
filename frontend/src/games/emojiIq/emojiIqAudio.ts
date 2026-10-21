@@ -1,12 +1,16 @@
 /**
  * EMOJI IQ — Procedural Web Audio Engine
- * Crisp, arcade-quality sound effects created entirely via Web Audio API.
+ * Calm, professional, and non-disruptive audio feedback created via Web Audio API.
+ * Includes master volume limiting, per-sound throttling, and clean lifecycle management.
  */
 
 class EmojiIqAudio {
   private ctx: AudioContext | null = null;
+  private masterGain: GainNode | null = null;
   public sfxEnabled: boolean = true;
   public musicEnabled: boolean = true;
+  private lastTriggerTime: Record<string, number> = {};
+  private activeOscillators: Set<OscillatorNode> = new Set();
 
   constructor() {
     try {
@@ -19,16 +23,43 @@ class EmojiIqAudio {
     }
   }
 
-  private initContext() {
-    if (!this.ctx && typeof window !== 'undefined') {
-      const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+  private initContext(): boolean {
+    if (typeof window === 'undefined') return false;
+
+    if (!this.ctx) {
+      const AudioCtx =
+        window.AudioContext ||
+        (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
       if (AudioCtx) {
         this.ctx = new AudioCtx();
       }
     }
-    if (this.ctx && this.ctx.state === 'suspended') {
-      this.ctx.resume();
+
+    if (this.ctx && !this.masterGain) {
+      this.masterGain = this.ctx.createGain();
+      // Safe, comfortable master gain ceiling
+      this.masterGain.gain.setValueAtTime(0.12, this.ctx.currentTime);
+      this.masterGain.connect(this.ctx.destination);
     }
+
+    if (this.ctx && this.ctx.state === 'suspended') {
+      this.ctx.resume().catch(() => {});
+    }
+
+    return !!(this.ctx && this.masterGain);
+  }
+
+  /**
+   * Throttles identical sounds to prevent overlap from duplicate renders/events.
+   */
+  private shouldThrottle(soundKey: string, cooldownMs: number): boolean {
+    const now = Date.now();
+    const last = this.lastTriggerTime[soundKey] || 0;
+    if (now - last < cooldownMs) {
+      return true;
+    }
+    this.lastTriggerTime[soundKey] = now;
+    return false;
   }
 
   public toggleSfx(): boolean {
@@ -36,7 +67,11 @@ class EmojiIqAudio {
     try {
       localStorage.setItem('emoji_iq_sfx', String(this.sfxEnabled));
     } catch {}
-    if (this.sfxEnabled) this.playPop();
+    if (this.sfxEnabled) {
+      this.playPop();
+    } else {
+      this.stopAll();
+    }
     return this.sfxEnabled;
   }
 
@@ -49,12 +84,27 @@ class EmojiIqAudio {
   }
 
   /**
-   * Tactile Button Pop
+   * Immediately stops any currently ringing oscillators and resets active sound state.
+   */
+  public stopAll() {
+    try {
+      for (const osc of this.activeOscillators) {
+        try {
+          osc.stop();
+          osc.disconnect();
+        } catch {}
+      }
+      this.activeOscillators.clear();
+    } catch {}
+  }
+
+  /**
+   * Tactile Button Pop (Short, soft sine click)
    */
   public playPop() {
     if (!this.sfxEnabled) return;
-    this.initContext();
-    if (!this.ctx) return;
+    if (this.shouldThrottle('pop', 80)) return;
+    if (!this.initContext() || !this.ctx || !this.masterGain) return;
 
     try {
       const osc = this.ctx.createOscillator();
@@ -62,137 +112,144 @@ class EmojiIqAudio {
       const now = this.ctx.currentTime;
 
       osc.type = 'sine';
-      osc.frequency.setValueAtTime(420, now);
-      osc.frequency.exponentialRampToValueAtTime(840, now + 0.06);
+      osc.frequency.setValueAtTime(440, now);
+      osc.frequency.exponentialRampToValueAtTime(720, now + 0.04);
 
-      gain.gain.setValueAtTime(0.18, now);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+      gain.gain.setValueAtTime(0.08, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
 
       osc.connect(gain);
-      gain.connect(this.ctx.destination);
+      gain.connect(this.masterGain);
+
+      this.activeOscillators.add(osc);
+      osc.onended = () => {
+        this.activeOscillators.delete(osc);
+        try {
+          osc.disconnect();
+          gain.disconnect();
+        } catch {}
+      };
 
       osc.start(now);
-      osc.stop(now + 0.09);
+      osc.stop(now + 0.06);
     } catch {}
   }
 
   /**
-   * Correct Answer Chime
+   * Correct Answer Chime (Gentle, elegant 3-note ascending triad)
    */
   public playCorrect() {
     if (!this.sfxEnabled) return;
-    this.initContext();
-    if (!this.ctx) return;
+    if (this.shouldThrottle('correct', 250)) return;
+    if (!this.initContext() || !this.ctx || !this.masterGain) return;
 
     try {
-      const freqs = [523.25, 659.25, 783.99, 1046.5]; // C5, E5, G5, C6
+      const freqs = [523.25, 659.25, 783.99]; // C5, E5, G5
       const now = this.ctx.currentTime;
 
       freqs.forEach((freq, idx) => {
         const osc = this.ctx!.createOscillator();
         const gain = this.ctx!.createGain();
-        const startTime = now + idx * 0.05;
+        const startTime = now + idx * 0.06;
 
         osc.type = 'triangle';
         osc.frequency.setValueAtTime(freq, startTime);
 
-        gain.gain.setValueAtTime(0.15, startTime);
-        gain.gain.exponentialRampToValueAtTime(0.001, startTime + 0.28);
+        gain.gain.setValueAtTime(0.08, startTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, startTime + 0.22);
 
         osc.connect(gain);
-        gain.connect(this.ctx!.destination);
+        gain.connect(this.masterGain!);
+
+        this.activeOscillators.add(osc);
+        osc.onended = () => {
+          this.activeOscillators.delete(osc);
+          try {
+            osc.disconnect();
+            gain.disconnect();
+          } catch {}
+        };
 
         osc.start(startTime);
-        osc.stop(startTime + 0.3);
+        osc.stop(startTime + 0.24);
       });
     } catch {}
   }
 
   /**
-   * Perfect Answer Sparkle
+   * Perfect Answer Sparkle (Delicate, high shimmer)
    */
   public playPerfect() {
     if (!this.sfxEnabled) return;
-    this.initContext();
-    if (!this.ctx) return;
+    if (this.shouldThrottle('perfect', 300)) return;
+    if (!this.initContext() || !this.ctx || !this.masterGain) return;
 
     try {
-      const notes = [659.25, 830.61, 987.77, 1318.51, 1567.98];
+      const notes = [659.25, 830.61, 987.77, 1318.51];
       const now = this.ctx.currentTime;
 
       notes.forEach((freq, i) => {
         const osc = this.ctx!.createOscillator();
         const gain = this.ctx!.createGain();
-        const t = now + i * 0.04;
+        const t = now + i * 0.05;
 
         osc.type = 'sine';
         osc.frequency.setValueAtTime(freq, t);
 
-        gain.gain.setValueAtTime(0.2, t);
-        gain.gain.exponentialRampToValueAtTime(0.001, t + 0.35);
+        gain.gain.setValueAtTime(0.07, t);
+        gain.gain.exponentialRampToValueAtTime(0.001, t + 0.24);
 
         osc.connect(gain);
-        gain.connect(this.ctx!.destination);
+        gain.connect(this.masterGain!);
+
+        this.activeOscillators.add(osc);
+        osc.onended = () => {
+          this.activeOscillators.delete(osc);
+          try {
+            osc.disconnect();
+            gain.disconnect();
+          } catch {}
+        };
 
         osc.start(t);
-        osc.stop(t + 0.38);
+        osc.stop(t + 0.26);
       });
     } catch {}
   }
 
   /**
-   * Incorrect Answer Buzz
+   * Incorrect Answer (Quiet, calm, non-disruptive feedback tone)
+   * REPLACED the harsh 0.20 sawtooth buzzer with a soft, muted low sine/triangle tone.
    */
   public playIncorrect() {
     if (!this.sfxEnabled) return;
-    this.initContext();
-    if (!this.ctx) return;
+    if (this.shouldThrottle('incorrect', 250)) return;
+    if (!this.initContext() || !this.ctx || !this.masterGain) return;
 
     try {
       const osc = this.ctx.createOscillator();
       const gain = this.ctx.createGain();
       const now = this.ctx.currentTime;
 
-      osc.type = 'sawtooth';
-      osc.frequency.setValueAtTime(150, now);
-      osc.frequency.linearRampToValueAtTime(90, now + 0.25);
+      // Soft low tone, no harsh harmonics
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(220, now);
+      osc.frequency.linearRampToValueAtTime(175, now + 0.14);
 
-      gain.gain.setValueAtTime(0.2, now);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.28);
-
-      osc.connect(gain);
-      gain.connect(this.ctx.destination);
-
-      osc.start(now);
-      osc.stop(now + 0.3);
-    } catch {}
-  }
-
-  /**
-   * Combo Escalation (Higher frequency with each combo count)
-   */
-  public playCombo(comboCount: number) {
-    if (!this.sfxEnabled) return;
-    this.initContext();
-    if (!this.ctx) return;
-
-    try {
-      const base = 440;
-      const step = Math.min(10, comboCount) * 55;
-      const now = this.ctx.currentTime;
-
-      const osc = this.ctx.createOscillator();
-      const gain = this.ctx.createGain();
-
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(base + step, now);
-      osc.frequency.exponentialRampToValueAtTime(base + step + 180, now + 0.12);
-
-      gain.gain.setValueAtTime(0.2, now);
+      gain.gain.setValueAtTime(0.06, now);
       gain.gain.exponentialRampToValueAtTime(0.001, now + 0.16);
 
       osc.connect(gain);
-      gain.connect(this.ctx.destination);
+      gain.connect(this.masterGain);
+
+      this.activeOscillators.add(osc);
+      osc.onended = () => {
+        this.activeOscillators.delete(osc);
+        try {
+          osc.disconnect();
+          gain.disconnect();
+        } catch {}
+      };
 
       osc.start(now);
       osc.stop(now + 0.18);
@@ -200,12 +257,52 @@ class EmojiIqAudio {
   }
 
   /**
-   * Countdown Tick (plays under 4 seconds)
+   * Combo Escalation (Gentle pitch lift, softly blended)
+   */
+  public playCombo(comboCount: number) {
+    if (!this.sfxEnabled) return;
+    if (this.shouldThrottle('combo', 200)) return;
+    if (!this.initContext() || !this.ctx || !this.masterGain) return;
+
+    try {
+      const base = 480;
+      const step = Math.min(8, comboCount) * 40;
+      const now = this.ctx.currentTime;
+
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(base + step, now);
+      osc.frequency.exponentialRampToValueAtTime(base + step + 120, now + 0.1);
+
+      gain.gain.setValueAtTime(0.05, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.14);
+
+      osc.connect(gain);
+      gain.connect(this.masterGain);
+
+      this.activeOscillators.add(osc);
+      osc.onended = () => {
+        this.activeOscillators.delete(osc);
+        try {
+          osc.disconnect();
+          gain.disconnect();
+        } catch {}
+      };
+
+      osc.start(now);
+      osc.stop(now + 0.15);
+    } catch {}
+  }
+
+  /**
+   * Countdown Tick (Subtle woodblock-like tap, throttled to prevent rapid repetition)
    */
   public playTick() {
     if (!this.sfxEnabled) return;
-    this.initContext();
-    if (!this.ctx) return;
+    if (this.shouldThrottle('tick', 600)) return; // Max once per 600ms
+    if (!this.initContext() || !this.ctx || !this.masterGain) return;
 
     try {
       const osc = this.ctx.createOscillator();
@@ -213,16 +310,25 @@ class EmojiIqAudio {
       const now = this.ctx.currentTime;
 
       osc.type = 'sine';
-      osc.frequency.setValueAtTime(800, now);
+      osc.frequency.setValueAtTime(640, now);
 
-      gain.gain.setValueAtTime(0.08, now);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.04);
+      gain.gain.setValueAtTime(0.025, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.025);
 
       osc.connect(gain);
-      gain.connect(this.ctx.destination);
+      gain.connect(this.masterGain);
+
+      this.activeOscillators.add(osc);
+      osc.onended = () => {
+        this.activeOscillators.delete(osc);
+        try {
+          osc.disconnect();
+          gain.disconnect();
+        } catch {}
+      };
 
       osc.start(now);
-      osc.stop(now + 0.05);
+      osc.stop(now + 0.03);
     } catch {}
   }
 
@@ -231,48 +337,54 @@ class EmojiIqAudio {
    */
   public playHint() {
     if (!this.sfxEnabled) return;
-    this.initContext();
-    if (!this.ctx) return;
+    if (this.shouldThrottle('hint', 200)) return;
+    if (!this.initContext() || !this.ctx || !this.masterGain) return;
 
     try {
       const now = this.ctx.currentTime;
       [440, 554.37, 659.25].forEach((freq, idx) => {
         const osc = this.ctx!.createOscillator();
         const gain = this.ctx!.createGain();
-        const t = now + idx * 0.07;
+        const t = now + idx * 0.06;
 
         osc.type = 'sine';
         osc.frequency.setValueAtTime(freq, t);
 
-        gain.gain.setValueAtTime(0.16, t);
-        gain.gain.exponentialRampToValueAtTime(0.001, t + 0.2);
+        gain.gain.setValueAtTime(0.06, t);
+        gain.gain.exponentialRampToValueAtTime(0.001, t + 0.16);
 
         osc.connect(gain);
-        gain.connect(this.ctx!.destination);
+        gain.connect(this.masterGain!);
+
+        this.activeOscillators.add(osc);
+        osc.onended = () => {
+          this.activeOscillators.delete(osc);
+          try {
+            osc.disconnect();
+            gain.disconnect();
+          } catch {}
+        };
 
         osc.start(t);
-        osc.stop(t + 0.22);
+        osc.stop(t + 0.18);
       });
     } catch {}
   }
 
   /**
-   * Level Clear Victory Fanfare
+   * Level Clear Victory Fanfare (Gentle, warm celebratory melody)
    */
   public playLevelClear() {
     if (!this.sfxEnabled) return;
-    this.initContext();
-    if (!this.ctx) return;
+    if (this.shouldThrottle('levelClear', 500)) return;
+    if (!this.initContext() || !this.ctx || !this.masterGain) return;
 
     try {
-      // Fanfare: C4 - E4 - G4 - C5 - G4 - C5
       const notes = [
-        { f: 523.25, d: 0.12 },
-        { f: 659.25, d: 0.12 },
+        { f: 523.25, d: 0.10 },
+        { f: 659.25, d: 0.10 },
         { f: 783.99, d: 0.12 },
-        { f: 1046.5, d: 0.24 },
-        { f: 783.99, d: 0.12 },
-        { f: 1046.5, d: 0.45 },
+        { f: 1046.5, d: 0.28 },
       ];
       let t = this.ctx.currentTime;
 
@@ -283,16 +395,25 @@ class EmojiIqAudio {
         osc.type = 'triangle';
         osc.frequency.setValueAtTime(n.f, t);
 
-        gain.gain.setValueAtTime(0.22, t);
+        gain.gain.setValueAtTime(0.09, t);
         gain.gain.exponentialRampToValueAtTime(0.001, t + n.d - 0.02);
 
         osc.connect(gain);
-        gain.connect(this.ctx!.destination);
+        gain.connect(this.masterGain!);
+
+        this.activeOscillators.add(osc);
+        osc.onended = () => {
+          this.activeOscillators.delete(osc);
+          try {
+            osc.disconnect();
+            gain.disconnect();
+          } catch {}
+        };
 
         osc.start(t);
         osc.stop(t + n.d);
 
-        t += n.d * 0.9;
+        t += n.d * 0.85;
       });
     } catch {}
   }

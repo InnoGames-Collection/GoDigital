@@ -1,11 +1,13 @@
 /**
  * EMOJI IQ — Main Game Container
- * Professional 40-Stage Tournament Emoji + Number Math Puzzle Game
- * Strictly follows the mandatory color palette and reference video presentation.
+ * Professional 40-Stage Tournament Emoji Reasoning & Math Puzzle Game
+ * Strictly adheres to the mandatory color palette and reference video presentation.
+ * 
+ * Free of coins, lives, and pay-to-continue prompts.
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { EmojiIqScreen, EmojiIqPlayerStats, TournamentScoreCalculation } from './types';
+import { EmojiIqScreen, EmojiIqPlayerStats, TournamentScoreCalculation, EmojiIqQuestion } from './types';
 import { EMOJI_IQ_LEVELS, getQuestionsForLevel } from './questionDatabase';
 import { calculateIqTournamentScore } from './scoringEngine';
 import { EmojiIqLeaderboardService } from './tournamentLeaderboardService';
@@ -19,7 +21,6 @@ import { EmojiIqLevelInfo } from './components/EmojiIqLevelInfo';
 import { EmojiIqPlayView } from './components/EmojiIqPlayView';
 import { EmojiIqFeedbackModal, FeedbackType } from './components/EmojiIqFeedbackModal';
 import { EmojiIqLeaderboardModal } from './components/EmojiIqLeaderboardModal';
-import { EmojiIqStoreModal } from './components/EmojiIqStoreModal';
 import { EmojiIqSettingsModal } from './components/EmojiIqSettingsModal';
 import { EmojiIqHowToPlayModal } from './components/EmojiIqHowToPlayModal';
 
@@ -35,7 +36,6 @@ export const EmojiIqGame: React.FC<EmojiIqGameProps> = ({ onClose, onGameComplet
 
   // Modals Visibility
   const [showLeaderboard, setShowLeaderboard] = useState<boolean>(false);
-  const [showStore, setShowStore] = useState<boolean>(false);
   const [showSettings, setShowSettings] = useState<boolean>(false);
   const [showHowToPlay, setShowHowToPlay] = useState<boolean>(false);
   const [feedbackType, setFeedbackType] = useState<FeedbackType | null>(null);
@@ -49,9 +49,10 @@ export const EmojiIqGame: React.FC<EmojiIqGameProps> = ({ onClose, onGameComplet
     setPlayerStats(EmojiIqLeaderboardService.loadPlayerStats());
   }, []);
 
-  // Active Level State
-  const currentLevelConfig = EMOJI_IQ_LEVELS[selectedLevelNumber - 1] || EMOJI_IQ_LEVELS[0];
-  const activeQuestions = getQuestionsForLevel(selectedLevelNumber);
+  // Active Questions State (Loaded per level start to guarantee stability during play)
+  const [activeQuestions, setActiveQuestions] = useState<EmojiIqQuestion[]>(() =>
+    getQuestionsForLevel(1)
+  );
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState<number>(0);
 
   // Runtime In-Level Scoring State
@@ -60,21 +61,33 @@ export const EmojiIqGame: React.FC<EmojiIqGameProps> = ({ onClose, onGameComplet
   const [levelBestCombo, setLevelBestCombo] = useState<number>(0);
   const [levelCorrectCount, setLevelCorrectCount] = useState<number>(0);
   const [levelPerfectCount, setLevelPerfectCount] = useState<number>(0);
-  const [lives, setLives] = useState<number>(3);
+  const [availableHints, setAvailableHints] = useState<number>(3);
   const [hintsUsedInQuestion, setHintsUsedInQuestion] = useState<number>(0);
   const [eliminatedOptions, setEliminatedOptions] = useState<number[]>([]);
   const [lastScoreCalc, setLastScoreCalc] = useState<TournamentScoreCalculation | null>(null);
 
+  // Clean audio stop when unmounting
+  useEffect(() => {
+    return () => {
+      emojiIqAudio.stopAll();
+    };
+  }, []);
+
+  // Active level config
+  const currentLevelConfig = EMOJI_IQ_LEVELS[selectedLevelNumber - 1] || EMOJI_IQ_LEVELS[0];
+
   // Initialize questions on level start
   const startLevel = useCallback((levelNum: number) => {
     setSelectedLevelNumber(levelNum);
+    const newQuestions = getQuestionsForLevel(levelNum);
+    setActiveQuestions(newQuestions);
     setCurrentQuestionIndex(0);
     setLevelScore(0);
     setComboCount(0);
     setLevelBestCombo(0);
     setLevelCorrectCount(0);
     setLevelPerfectCount(0);
-    setLives(3);
+    setAvailableHints(3); // 3 fresh hints per level
     setHintsUsedInQuestion(0);
     setEliminatedOptions([]);
     setFeedbackType(null);
@@ -82,7 +95,7 @@ export const EmojiIqGame: React.FC<EmojiIqGameProps> = ({ onClose, onGameComplet
   }, []);
 
   // Handle User Answer Selection
-  const handleSelectAnswer = (optionIndex: number, timeRemainingSeconds: number) => {
+  const handleSelectAnswer = useCallback((optionIndex: number, timeRemainingSeconds: number) => {
     const question = activeQuestions[currentQuestionIndex];
     if (!question) return;
 
@@ -121,42 +134,25 @@ export const EmojiIqGame: React.FC<EmojiIqGameProps> = ({ onClose, onGameComplet
       if (calc.isPerfect) {
         setLevelPerfectCount((prev) => prev + 1);
       }
-
-      setFeedbackType('CORRECT');
+      // Answer feedback is now displayed inline on the question board
     } else {
+      // Quiet, gentle non-disruptive feedback
       emojiIqAudio.playIncorrect();
       setComboCount(0);
-      const remaining = lives - 1;
-      setLives(remaining);
-
-      if (remaining <= 0) {
-        setFeedbackType('NO_LIVES');
-      } else {
-        setFeedbackType('INCORRECT');
-      }
+      // No life reduction, no coin penalty, continues smoothly with inline feedback
     }
-  };
+  }, [activeQuestions, currentQuestionIndex, comboCount, hintsUsedInQuestion, levelBestCombo]);
 
   // Handle Time Expired on Question
-  const handleTimeExpired = () => {
+  const handleTimeExpired = useCallback(() => {
     emojiIqAudio.playIncorrect();
     setComboCount(0);
-    const remaining = lives - 1;
-    setLives(remaining);
-
-    if (remaining <= 0) {
-      setFeedbackType('NO_LIVES');
-    } else {
-      setFeedbackType('TIME_OUT');
-    }
-  };
+    // Inline timeout feedback handled smoothly on play view
+  }, []);
 
   // Handle Hint Usage
-  const handleUseHint = () => {
-    if (playerStats.availableHints <= 0) {
-      setShowStore(true);
-      return;
-    }
+  const handleUseHint = useCallback(() => {
+    if (availableHints <= 0) return;
 
     const question = activeQuestions[currentQuestionIndex];
     if (!question) return;
@@ -172,110 +168,65 @@ export const EmojiIqGame: React.FC<EmojiIqGameProps> = ({ onClose, onGameComplet
     const toEliminate = wrongIndices.slice(0, 1);
     setEliminatedOptions((prev) => [...prev, ...toEliminate]);
     setHintsUsedInQuestion((prev) => prev + 1);
+    setAvailableHints((prev) => Math.max(0, prev - 1));
 
-    EmojiIqLeaderboardService.useHint();
-    refreshStats();
     emojiIqAudio.playHint();
-  };
+  }, [availableHints, activeQuestions, currentQuestionIndex, eliminatedOptions]);
 
-  // Advance from Feedback Modal
-  const handleAdvanceFromFeedback = () => {
-    const currentQ = activeQuestions[currentQuestionIndex];
+  // Advance to next question or complete level
+  const handleAdvanceQuestion = useCallback(() => {
+    const nextIdx = currentQuestionIndex + 1;
 
-    if (feedbackType === 'CORRECT') {
-      const nextIdx = currentQuestionIndex + 1;
+    if (nextIdx >= activeQuestions.length) {
+      // LEVEL COMPLETE!
+      emojiIqAudio.playLevelClear();
 
-      if (nextIdx >= activeQuestions.length) {
-        // LEVEL COMPLETE!
-        emojiIqAudio.playLevelClear();
+      const finalAccuracy = Math.round(
+        (levelCorrectCount / activeQuestions.length) * 100
+      );
 
-        const finalAccuracy = Math.round(
-          (levelCorrectCount / activeQuestions.length) * 100
-        );
+      EmojiIqLeaderboardService.recordLevelCompletion(
+        selectedLevelNumber,
+        levelScore,
+        finalAccuracy,
+        levelBestCombo,
+        0,
+        levelPerfectCount
+      );
+      refreshStats();
 
-        EmojiIqLeaderboardService.recordLevelCompletion(
-          selectedLevelNumber,
-          levelScore,
-          finalAccuracy,
-          levelBestCombo,
-          currentLevelConfig.rewardCoins,
-          levelPerfectCount
-        );
-        refreshStats();
-
-        if (onGameCompleted) {
-          onGameCompleted(levelScore);
-        }
-
-        setFeedbackType('LEVEL_CLEAR');
-      } else {
-        setCurrentQuestionIndex(nextIdx);
-        setHintsUsedInQuestion(0);
-        setEliminatedOptions([]);
-        setFeedbackType(null);
+      if (onGameCompleted) {
+        onGameCompleted(levelScore);
       }
-    } else if (feedbackType === 'INCORRECT' || feedbackType === 'TIME_OUT') {
-      const nextIdx = currentQuestionIndex + 1;
-      if (nextIdx >= activeQuestions.length) {
-        // Ended questions
-        const finalAccuracy = Math.round(
-          (levelCorrectCount / activeQuestions.length) * 100
-        );
-        EmojiIqLeaderboardService.recordLevelCompletion(
-          selectedLevelNumber,
-          levelScore,
-          finalAccuracy,
-          levelBestCombo,
-          5,
-          levelPerfectCount
-        );
-        refreshStats();
-        setFeedbackType('LEVEL_CLEAR');
-      } else {
-        setCurrentQuestionIndex(nextIdx);
-        setHintsUsedInQuestion(0);
-        setEliminatedOptions([]);
-        setFeedbackType(null);
-      }
-    } else if (feedbackType === 'LEVEL_CLEAR') {
+
+      setFeedbackType('LEVEL_CLEAR');
+    } else {
+      setCurrentQuestionIndex(nextIdx);
+      setHintsUsedInQuestion(0);
+      setEliminatedOptions([]);
+      setFeedbackType(null);
+    }
+  }, [
+    currentQuestionIndex,
+    activeQuestions.length,
+    levelCorrectCount,
+    selectedLevelNumber,
+    levelScore,
+    levelBestCombo,
+    levelPerfectCount,
+    refreshStats,
+    onGameCompleted,
+  ]);
+
+  // Advance from Level Clear Modal to next level
+  const handleAdvanceFromFeedback = useCallback(() => {
+    if (feedbackType === 'LEVEL_CLEAR') {
       const nextLevel = Math.min(40, selectedLevelNumber + 1);
       setSelectedLevelNumber(nextLevel);
       setFeedbackType(null);
       setScreen('LEVEL_INFO');
-    } else if (feedbackType === 'NO_LIVES') {
-      setFeedbackType(null);
-      setScreen('LEVEL_INFO');
     }
-  };
-
-  // Restore Lives for 30 Coins
-  const handleUseCoinsForLives = () => {
-    const success = EmojiIqLeaderboardService.restoreLivesForCoins(30);
-    if (success) {
-      setLives(3);
-      refreshStats();
-      setFeedbackType(null);
-      emojiIqAudio.playCorrect();
-    }
-  };
-
-  // Store actions
-  const handleBuyHints = (count: number, cost: number) => {
-    const ok = EmojiIqLeaderboardService.buyHints(count, cost);
-    if (ok) {
-      refreshStats();
-      emojiIqAudio.playPop();
-    }
-  };
-
-  const handleBuyLives = (count: number, cost: number) => {
-    const ok = EmojiIqLeaderboardService.buyLives(count, cost);
-    if (ok) {
-      setLives(3);
-      refreshStats();
-      emojiIqAudio.playPop();
-    }
-  };
+  }, [feedbackType, selectedLevelNumber]);
 
   // Reset Progress
   const handleResetProgress = () => {
@@ -308,10 +259,7 @@ export const EmojiIqGame: React.FC<EmojiIqGameProps> = ({ onClose, onGameComplet
 
       {/* Global Header Bar */}
       <EmojiIqHeader
-        coins={playerStats.coins}
-        lives={lives}
-        availableHints={playerStats.availableHints}
-        onOpenStore={() => setShowStore(true)}
+        availableHints={availableHints}
         onOpenSettings={() => setShowSettings(true)}
         onBack={() => {
           if (screen === 'HOME') {
@@ -322,7 +270,7 @@ export const EmojiIqGame: React.FC<EmojiIqGameProps> = ({ onClose, onGameComplet
         }}
         onUseHint={handleUseHint}
         showHintButton={screen === 'PLAYING'}
-        hintsDisabled={eliminatedOptions.length >= 2}
+        hintsDisabled={eliminatedOptions.length >= 2 || availableHints <= 0}
       />
 
       {/* Active Screen Container */}
@@ -336,7 +284,6 @@ export const EmojiIqGame: React.FC<EmojiIqGameProps> = ({ onClose, onGameComplet
             }}
             onOpenLevelSelect={() => setScreen('LEVEL_SELECT')}
             onOpenLeaderboard={() => setShowLeaderboard(true)}
-            onOpenStore={() => setShowStore(true)}
             onOpenHowToPlay={() => setShowHowToPlay(true)}
           />
         )}
@@ -375,6 +322,7 @@ export const EmojiIqGame: React.FC<EmojiIqGameProps> = ({ onClose, onGameComplet
             eliminatedOptionIndices={eliminatedOptions}
             onSelectAnswer={handleSelectAnswer}
             onTimeExpired={handleTimeExpired}
+            onAdvanceQuestion={handleAdvanceQuestion}
           />
         )}
       </main>
@@ -394,8 +342,6 @@ export const EmojiIqGame: React.FC<EmojiIqGameProps> = ({ onClose, onGameComplet
           }
           bestCombo={levelBestCombo}
           perfectCount={levelPerfectCount}
-          coinsWon={currentLevelConfig.rewardCoins}
-          remainingLives={lives}
           explanation={activeQuestion?.explanation}
           onAdvance={handleAdvanceFromFeedback}
           onOpenLeaderboard={() => {
@@ -406,26 +352,14 @@ export const EmojiIqGame: React.FC<EmojiIqGameProps> = ({ onClose, onGameComplet
             setFeedbackType(null);
             setScreen('HOME');
           }}
-          onUseCoinsForLives={handleUseCoinsForLives}
-          playerCoins={playerStats.coins}
         />
       )}
 
-      {/* Leaderboard Modal (Accessible before & after playing) */}
+      {/* Leaderboard Modal */}
       {showLeaderboard && (
         <EmojiIqLeaderboardModal
           playerStats={playerStats}
           onClose={() => setShowLeaderboard(false)}
-        />
-      )}
-
-      {/* Store Modal */}
-      {showStore && (
-        <EmojiIqStoreModal
-          playerStats={playerStats}
-          onBuyHints={handleBuyHints}
-          onBuyLives={handleBuyLives}
-          onClose={() => setShowStore(false)}
         />
       )}
 

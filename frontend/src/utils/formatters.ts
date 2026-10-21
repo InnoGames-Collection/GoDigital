@@ -28,7 +28,7 @@ export function formatEthiopianPhone(phone: string): string {
 }
 
 export function maskPhoneNumber(phone: string): string {
-  if (!phone) return '0912*****678';
+  if (!phone) return 'Player';
   let cleaned = phone.replace(/\D/g, '');
   
   if (cleaned.startsWith('251')) {
@@ -43,13 +43,13 @@ export function maskPhoneNumber(phone: string): string {
     const prefix = cleaned.slice(0, 4); // '0912'
     const suffix = cleaned.slice(-3);   // '678'
     return `${prefix}*****${suffix}`;
-  } else if (cleaned.length > 7) {
+  } else if (cleaned.length >= 7) {
     const prefix = cleaned.slice(0, 4);
     const suffix = cleaned.slice(-3);
     return `${prefix}*****${suffix}`;
   }
   
-  return '0912*****678';
+  return 'Player';
 }
 
 export function formatTimeRemaining(ms: number): string {

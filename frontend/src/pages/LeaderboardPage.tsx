@@ -38,13 +38,21 @@ export const LeaderboardPage: React.FC<LeaderboardPageProps> = ({
   games = [],
   onPlayGame,
 }) => {
-  // 1. Live Countdown ticker (1s interval)
+  // 1. Live Countdown ticker (1s interval) and Authoritative Server Sync
   const [ticker, setTicker] = useState(0);
   useEffect(() => {
     const timer = setInterval(() => {
       setTicker((t) => t + 1);
     }, 1000);
     return () => clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    TournamentService.syncWithBackend();
+    const unsubscribe = TournamentService.subscribe(() => {
+      setTicker((t) => t + 1);
+    });
+    return () => unsubscribe();
   }, []);
 
   // 2. Authoritative Tournament Summary (Active Game: Helix Jump)
@@ -67,9 +75,9 @@ export const LeaderboardPage: React.FC<LeaderboardPageProps> = ({
   }, [games]);
 
   // Masked phone format for privacy protection
-  const maskedPhone = profile.phoneNumber
+  const maskedPhone = profile.phoneNumber && profile.phoneNumber.length >= 7
     ? `${profile.phoneNumber.slice(0, 3)}*****${profile.phoneNumber.slice(-3)}`
-    : '091*****890';
+    : 'Guest';
 
   const isUserRanked = currentUserBestScore > 0 && currentUserRank > 0;
   const isUserInTop10 = isUserRanked && currentUserRank <= 10;

@@ -261,16 +261,38 @@ export const SortingBallsGame: React.FC<SortingBallsGameProps> = ({
     }
   };
 
+  // Synchronize board initialization when entering PLAYING mode
+  useEffect(() => {
+    if (gameState === 'PLAYING') {
+      const lvl = currentLevelNumber || progress.unlockedLevel || 1;
+      const config = SORTING_LEVELS.find((l) => l.level === lvl) || SORTING_LEVELS[0];
+      const cloned = config.tubes.map((t) => [...t]);
+      if (currentTubes.length === 0) {
+        setCurrentTubes(cloned);
+      }
+      requestAnimationFrame(() => {
+        if (renderer3DRef.current) {
+          renderer3DRef.current.resize();
+          renderer3DRef.current.setLevelState(
+            currentTubes.length > 0 ? currentTubes : cloned,
+            null,
+            1
+          );
+        }
+      });
+    }
+  }, [gameState]);
+
   /**
-   * Add 1 Extra Empty Tube
+   * Add 1 Extra Empty Tube (Strictly maximum 1 per active level attempt)
    * Penalty: -250 PTS
    */
   const handleAddExtraTube = () => {
-    if (extraTubesAdded >= 2 || gameState !== 'PLAYING' || isAnimating) return;
+    if (extraTubesAdded >= 1 || gameState !== 'PLAYING' || isAnimating) return;
     sortingAudio.playButton();
     const updated = [...currentTubes, []];
     setCurrentTubes(updated);
-    setExtraTubesAdded((prev) => prev + 1);
+    setExtraTubesAdded(1);
 
     // Update lifetime stats
     saveProgress({
@@ -797,98 +819,100 @@ export const SortingBallsGame: React.FC<SortingBallsGameProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col justify-between overflow-hidden select-none font-['Plus_Jakarta_Sans',sans-serif] bg-[#050917]">
+    <div
+      className="fixed inset-0 z-50 flex flex-col justify-between overflow-hidden select-none font-['Plus_Jakarta_Sans',sans-serif]"
+      style={{ backgroundColor: '#F3E9D8', color: '#40372F' }}
+    >
       {/* ===================================================================
-          1. IN-GAME TOURNAMENT APP BAR (Visible during PLAYING)
+          1. IN-GAME TOURNAMENT APP BAR (Strictly 6 items in exact order)
+             1. Back, 2. Time, 3. Sound, 4. Moves, 5. Undo, 6. Add Tube
          =================================================================== */}
       {gameState === 'PLAYING' && (
-        <header className="w-full h-14 sm:h-15 bg-[#070e24]/90 backdrop-blur-md flex items-center justify-between px-3 sm:px-6 border-b border-white/[0.08] z-30 shrink-0 shadow-md">
-          {/* Left: Prominent [ BACK TO MENU ] Button */}
+        <header
+          className="w-full h-14 sm:h-16 flex items-center justify-between px-3 sm:px-6 border-b border-[#D4C3AA] z-30 shrink-0 shadow-xs"
+          style={{ backgroundColor: '#F3E9D8' }}
+        >
+          {/* Left: Primary controls (Back, Time, Sound) */}
           <div className="flex items-center gap-2 sm:gap-3">
+            {/* 1. Back */}
             <button
               onClick={() => {
                 sortingAudio.playButton();
                 setGameState('MENU');
               }}
-              className="px-3 py-1.5 rounded-xl bg-white/[0.07] hover:bg-white/[0.14] active:scale-95 text-white flex items-center gap-1.5 transition-all cursor-pointer border border-white/10 shadow-sm"
-              title="Return to Main Menu"
-              aria-label="Return to Main Menu"
+              className="px-3 py-1.5 rounded-xl bg-[#E6D8C3] hover:bg-[#d8c8b0] active:scale-95 text-[#40372F] flex items-center gap-1.5 transition-all cursor-pointer border border-[#D4C3AA] shadow-xs text-xs font-bold"
+              title="Return to Menu"
+              aria-label="Back to Menu"
             >
-              <ArrowLeft className="w-4 h-4 text-cyan-400" />
-              <span className="text-xs font-black uppercase tracking-wider">
-                MENU
-              </span>
+              <ArrowLeft className="w-4 h-4 text-[#40372F]" />
+              <span className="font-bold uppercase tracking-wider">Back</span>
             </button>
 
-            {/* Level Badge */}
-            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-cyan-500/10 border border-cyan-400/25">
-              <span className="text-[11px] font-black text-cyan-300 font-mono uppercase">
-                LVL {currentLevelNumber} / {TOTAL_SORTING_LEVELS}
-              </span>
-            </div>
-          </div>
-
-          {/* Center: Live Timer & Level Score */}
-          <div className="flex items-center gap-2">
-            <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-900/80 border border-white/10 text-slate-300 font-mono text-xs">
-              <Clock className="w-3.5 h-3.5 text-sky-400" />
+            {/* 2. Time */}
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#E6D8C3] border border-[#D4C3AA] text-[#40372F] font-mono text-xs font-bold shadow-xs">
+              <Clock className="w-3.5 h-3.5 text-[#786B5B]" />
               <span>{formatTime(elapsedSeconds)}</span>
             </div>
 
-            <div className="hidden sm:flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-900/80 border border-amber-400/30 text-amber-300 font-mono text-xs shadow-inner">
-              <Flame className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
-              <span>{currentScore.toLocaleString()} PTS</span>
-            </div>
-          </div>
-
-          {/* Right: Audio, Fullscreen, Video, Close */}
-          <div className="flex items-center gap-1.5">
-            {/* Demo Video */}
-            <button
-              onClick={() => {
-                sortingAudio.playButton();
-                setIsVideoModalOpen(true);
-              }}
-              className="w-8.5 h-8.5 rounded-xl bg-white/[0.05] hover:bg-white/[0.10] active:scale-95 text-slate-300 hover:text-white flex items-center justify-center transition-all cursor-pointer border border-white/10"
-              title="Demo Video"
-              aria-label="Demo Video"
-            >
-              <Film className="w-4 h-4 text-amber-400/90" />
-            </button>
-
-            {/* Sound Toggle */}
+            {/* 3. Sound */}
             <button
               onClick={() => setSoundActive(!soundActive)}
-              className="w-8.5 h-8.5 rounded-xl bg-white/[0.05] hover:bg-white/[0.10] active:scale-95 text-slate-300 hover:text-white flex items-center justify-center transition-all cursor-pointer border border-white/10"
+              className="w-8.5 h-8.5 rounded-xl bg-[#E6D8C3] hover:bg-[#d8c8b0] active:scale-95 text-[#40372F] flex items-center justify-center transition-all cursor-pointer border border-[#D4C3AA] shadow-xs"
               aria-label="Toggle Sound"
+              title="Toggle Sound"
             >
               {soundActive ? (
-                <Volume2 className="w-4 h-4 text-cyan-400" />
+                <Volume2 className="w-4 h-4 text-[#40372F]" />
               ) : (
-                <VolumeX className="w-4 h-4 text-slate-500" />
+                <VolumeX className="w-4 h-4 text-[#786B5B]" />
               )}
             </button>
+          </div>
 
-            {/* Fullscreen */}
-            <button
-              onClick={toggleFullscreen}
-              className="w-8.5 h-8.5 rounded-xl bg-white/[0.05] hover:bg-white/[0.10] active:scale-95 text-slate-300 hover:text-white flex items-center justify-center transition-all cursor-pointer border border-white/10"
-              aria-label="Toggle Fullscreen"
-            >
-              {isFullscreen ? (
-                <Minimize2 className="w-4 h-4 text-slate-300" />
-              ) : (
-                <Maximize2 className="w-4 h-4 text-slate-300" />
-              )}
-            </button>
+          {/* Right: Gameplay actions (Moves, Undo, Add Tube) */}
+          <div className="flex items-center gap-2 sm:gap-3">
+            {/* 4. Moves */}
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#E6D8C3] border border-[#D4C3AA] text-[#40372F] font-mono text-xs font-bold shadow-xs">
+              <span className="text-[#786B5B] text-[10px] font-sans uppercase font-bold">Moves</span>
+              <span>{movesCount}</span>
+            </div>
 
-            {/* Exit Game */}
+            {/* 5. Undo */}
+            <div className="relative">
+              <button
+                onClick={handleUndo}
+                disabled={moveHistory.length === 0 || undosRemaining <= 0 || isAnimating}
+                className={`px-3 py-1.5 rounded-xl bg-[#E6D8C3] hover:bg-[#d8c8b0] active:scale-95 text-[#40372F] flex items-center gap-1.5 text-xs font-bold transition-all cursor-pointer border border-[#D4C3AA] shadow-xs ${
+                  moveHistory.length === 0 || undosRemaining <= 0 || isAnimating
+                    ? 'opacity-40 cursor-not-allowed'
+                    : ''
+                }`}
+                aria-label="Undo Move"
+                title={`Undo (${undosRemaining} left)`}
+              >
+                <Undo2 className="w-4 h-4 text-[#40372F] stroke-[2.2]" />
+                <span className="hidden sm:inline">Undo</span>
+                <span className="text-[10px] font-mono bg-[#D4C3AA] text-[#40372F] px-1.5 py-0.2 rounded-full font-bold">
+                  {undosRemaining}
+                </span>
+              </button>
+            </div>
+
+            {/* 6. Add Tube (Strictly maximum 1 per attempt) */}
             <button
-              onClick={handleExitGame}
-              className="w-8.5 h-8.5 rounded-xl bg-white/[0.05] hover:bg-rose-950/40 hover:text-rose-300 active:scale-95 text-slate-400 flex items-center justify-center transition-all cursor-pointer border border-white/10"
-              aria-label="Exit Game"
+              onClick={handleAddExtraTube}
+              disabled={extraTubesAdded >= 1 || isAnimating}
+              className={`px-3 py-1.5 rounded-xl flex items-center gap-1.5 text-xs font-bold transition-all border shadow-xs ${
+                extraTubesAdded >= 1
+                  ? 'opacity-40 cursor-not-allowed bg-[#E6D8C3] border-[#D4C3AA] text-[#786B5B]'
+                  : 'bg-[#D58A36] hover:bg-[#c47b2c] active:scale-95 text-white border-[#b87024] cursor-pointer'
+              }`}
+              aria-label="Add Extra Buffer Tube (-250 PTS)"
+              title={extraTubesAdded >= 1 ? 'Extra tube already added (Max 1 per attempt)' : 'Add 1 Tube (-250 PTS)'}
             >
-              <X className="w-4 h-4" />
+              <Plus className="w-4 h-4 stroke-[2.5]" />
+              <span>Tube</span>
+              {extraTubesAdded >= 1 && <span className="text-[10px] font-mono opacity-80">(1/1)</span>}
             </button>
           </div>
         </header>
@@ -897,124 +921,18 @@ export const SortingBallsGame: React.FC<SortingBallsGameProps> = ({
       {/* ===================================================================
           2. PUZZLE ARENA (3D Canvas + In-Game HUD Controls)
          =================================================================== */}
-      <main className="relative flex-1 w-full flex flex-col overflow-hidden bg-[#050917]">
-        {/* Background Ambient Aura */}
-        <div
-          className="absolute inset-0 pointer-events-none"
-          style={{
-            background:
-              'radial-gradient(ellipse at 50% 25%, #0e1738 0%, #0a112c 45%, #060a1c 85%, #030612 100%)',
-          }}
-        />
-
-        {/* Floating Bokeh Motes */}
-        <div className="absolute inset-0 pointer-events-none overflow-hidden">
-          <div className="absolute top-[22%] left-[18%] w-2 h-2 rounded-full bg-cyan-400/20 blur-[1px] animate-pulse" />
-          <div
-            className="absolute top-[35%] right-[16%] w-1.5 h-1.5 rounded-full bg-sky-300/25 blur-[1px] animate-pulse"
-            style={{ animationDelay: '1.2s' }}
-          />
-          <div
-            className="absolute bottom-[32%] left-[24%] w-2.5 h-2.5 rounded-full bg-indigo-400/15 blur-[1.5px] animate-pulse"
-            style={{ animationDelay: '2.4s' }}
-          />
-        </div>
-
-        {/* IN-GAME SECONDARY HUD BAR (Moves, Par, Undo, Hint, Add Tube) */}
-        {gameState === 'PLAYING' && (
-          <div className="w-full max-w-xl mx-auto px-4 pt-3 pb-1 flex items-center justify-between z-20 pointer-events-auto">
-            {/* Left: Restart */}
-            <div className="flex items-center gap-2">
-              <button
-                onClick={handleReset}
-                className="w-10 h-10 rounded-xl bg-slate-900/70 hover:bg-slate-800/80 active:scale-95 text-slate-300 hover:text-white flex items-center justify-center border border-white/10 hover:border-cyan-500/30 transition-all cursor-pointer shadow-sm"
-                aria-label="Restart Level"
-                title="Restart Level"
-              >
-                <RotateCcw className="w-4.5 h-4.5 stroke-[2.2]" />
-              </button>
-            </div>
-
-            {/* Center: Moves & Par Pill */}
-            <button
-              onClick={() => setGameState('LEVEL_SELECT')}
-              className="flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-slate-900/70 border border-white/10 hover:border-cyan-500/30 backdrop-blur-md shadow-sm active:scale-98 transition-all cursor-pointer"
-              title="Choose Level"
-            >
-              <div className="flex items-center gap-2 text-xs font-mono font-medium">
-                <span className="text-slate-400">
-                  Moves:{' '}
-                  <strong className="text-white font-mono font-bold">
-                    {movesCount}
-                  </strong>
-                </span>
-                <span className="text-slate-600">•</span>
-                <span className="text-cyan-400/90 font-mono">
-                  Par: {currentConfig.optimalMoves}
-                </span>
-              </div>
-            </button>
-
-            {/* Right: Hint, Undo & Add Extra Tube */}
-            <div className="flex items-center gap-2">
-              {/* Hint Button */}
-              <button
-                onClick={handleRequestHint}
-                className="w-10 h-10 rounded-xl bg-slate-900/70 hover:bg-slate-800/80 active:scale-95 text-amber-300 flex items-center justify-center border border-white/10 hover:border-amber-400/40 transition-all cursor-pointer shadow-sm"
-                aria-label="Request Hint (-150 PTS)"
-                title="Hint (-150 PTS)"
-              >
-                <Lightbulb className="w-4.5 h-4.5" />
-              </button>
-
-              {/* Undo Button with Remaining Badge */}
-              <div className="relative">
-                <button
-                  onClick={handleUndo}
-                  disabled={moveHistory.length === 0 || undosRemaining <= 0 || isAnimating}
-                  className={`w-10 h-10 rounded-xl bg-slate-900/70 hover:bg-slate-800/80 active:scale-95 text-slate-300 hover:text-white flex items-center justify-center border border-white/10 hover:border-cyan-500/30 transition-all cursor-pointer shadow-sm ${
-                    moveHistory.length === 0 || undosRemaining <= 0
-                      ? 'opacity-40 cursor-not-allowed'
-                      : ''
-                  }`}
-                  aria-label="Undo Move"
-                  title="Undo Move"
-                >
-                  <Undo2 className="w-4.5 h-4.5 text-cyan-300 stroke-[2.2]" />
-                </button>
-
-                <div className="absolute -bottom-1 -left-1 px-1.5 py-0.2 rounded-full bg-cyan-600 border border-white/60 text-[9px] font-black text-white shadow-xs">
-                  {undosRemaining}
-                </div>
-              </div>
-
-              {/* Extra Tube Button (+1) */}
-              <button
-                onClick={handleAddExtraTube}
-                disabled={extraTubesAdded >= 2}
-                className={`w-10 h-10 rounded-xl bg-slate-900/70 hover:bg-slate-800/80 active:scale-95 text-slate-300 hover:text-white flex items-center justify-center border border-white/10 hover:border-cyan-500/30 transition-all cursor-pointer shadow-sm ${
-                  extraTubesAdded >= 2 ? 'opacity-40 cursor-not-allowed' : ''
-                }`}
-                aria-label="Add Extra Buffer Tube (-250 PTS)"
-                title="Add 1 Tube (-250 PTS)"
-              >
-                <div className="flex items-center text-emerald-400">
-                  <span className="text-xs font-bold font-mono">1+</span>
-                  <Plus className="w-3.5 h-3.5 stroke-[2.5] -ml-0.5" />
-                </div>
-              </button>
-            </div>
-          </div>
-        )}
-
+      <main
+        className="relative flex-1 w-full flex flex-col overflow-hidden"
+        style={{ backgroundColor: '#F3E9D8' }}
+      >
         {/* Live Score Gain / Penalty Floating Notification */}
         {lastScoreGain && (
           <div className="absolute top-16 left-1/2 -translate-x-1/2 z-30 pointer-events-none animate-in fade-in slide-in-from-bottom-2 duration-200">
             <div
               className={`px-3 py-1 rounded-full border text-xs font-bold uppercase tracking-wider shadow-lg backdrop-blur-sm flex items-center gap-1.5 font-mono ${
                 lastScoreGain.amount < 0
-                  ? 'bg-rose-950/90 border-rose-500/40 text-rose-300'
-                  : 'bg-slate-900/90 border-amber-400/40 text-amber-300'
+                  ? 'bg-rose-100 border-rose-400 text-rose-800'
+                  : 'bg-amber-100 border-amber-400 text-amber-800'
               }`}
             >
               <span>✦</span>
@@ -1027,8 +945,8 @@ export const SortingBallsGame: React.FC<SortingBallsGameProps> = ({
         {/* Active Hint Banner */}
         {activeHintMessage && (
           <div className="absolute top-24 left-1/2 -translate-x-1/2 z-30 pointer-events-none animate-in fade-in slide-in-from-top-2 duration-200">
-            <div className="px-4 py-1.5 rounded-full bg-amber-500/20 border border-amber-400/50 text-amber-200 text-xs font-bold tracking-wide shadow-xl backdrop-blur-md flex items-center gap-2">
-              <Lightbulb className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+            <div className="px-4 py-1.5 rounded-full bg-[#E6D8C3] border border-[#D58A36] text-[#40372F] text-xs font-bold tracking-wide shadow-xl backdrop-blur-md flex items-center gap-2">
+              <Lightbulb className="w-3.5 h-3.5 text-[#D58A36] shrink-0" />
               <span>{activeHintMessage}</span>
             </div>
           </div>
@@ -1050,7 +968,16 @@ export const SortingBallsGame: React.FC<SortingBallsGameProps> = ({
           progress={progress}
           onPlay={() => {
             sortingAudio.playButton();
+            const lvlToPlay = progress.unlockedLevel || 1;
+            loadLevel(lvlToPlay);
             setGameState('PLAYING');
+            requestAnimationFrame(() => {
+              if (renderer3DRef.current) {
+                renderer3DRef.current.resize();
+                const config = SORTING_LEVELS.find((l) => l.level === lvlToPlay) || SORTING_LEVELS[0];
+                renderer3DRef.current.setLevelState(config.tubes.map((t) => [...t]), null, 1);
+              }
+            });
           }}
           onOpenLevels={() => {
             sortingAudio.playButton();

@@ -52,7 +52,6 @@ export const HillClimbVictoryModal: React.FC<HillClimbVictoryModalProps> = ({
           <h2 className="text-xl sm:text-2xl font-black text-white uppercase tracking-tight">
             LEVEL {levelConfig.levelNumber} COMPLETE!
           </h2>
-          <div className="text-xs text-cyan-300 font-bold">{levelConfig.name}</div>
         </div>
 
         {/* Stars Display */}

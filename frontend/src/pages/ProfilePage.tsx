@@ -79,8 +79,8 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
   const [subView, setSubView] = useState<ProfileSubView>(null);
   const [soundEnabled, setSoundEnabled] = useState(true);
 
-  const phone = profile.phoneNumber || '0911234890';
-  const maskedMsisdn = `${phone.slice(0, 3)}*****${phone.slice(-3)}`;
+  const phone = profile.phoneNumber || '';
+  const maskedMsisdn = phone.length >= 7 ? `${phone.slice(0, 3)}*****${phone.slice(-3)}` : 'Unregistered';
 
   // Authoritative persisted Helix Jump tournament best score
   const bestScore = useMemo(() => {

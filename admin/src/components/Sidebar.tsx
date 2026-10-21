@@ -80,10 +80,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
               <Badge status={currentAdmin?.role} size="sm" />
             </div>
           </div>
-          {availableAdmins.length > 1 && (
+          {availableAdmins.length > 1 && currentRole === 'SUPER_ADMIN' && (
             <button
               onClick={() => setShowAdminMenu(!showAdminMenu)}
-              title="Switch role identity for staging/audit"
+              title="Super Admin role delegation for staging/audit"
               className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition"
             >
               <ChevronDown size={16} />
@@ -91,11 +91,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
           )}
         </div>
 
-        {/* Identity Selector Menu */}
-        {showAdminMenu && availableAdmins.length > 1 && (
+        {/* Identity Selector Menu (Restricted to Super Admin) */}
+        {showAdminMenu && availableAdmins.length > 1 && currentRole === 'SUPER_ADMIN' && (
           <div className="absolute top-full left-2 right-2 mt-1 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl p-2 z-50 space-y-1">
             <div className="text-[10px] font-bold text-slate-400 px-2 py-1 uppercase tracking-wider">
-              Switch Admin Role Identity:
+              Delegate Role Identity (Super Admin Only):
             </div>
             {availableAdmins.map((adm) => (
               <button

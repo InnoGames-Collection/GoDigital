@@ -126,12 +126,12 @@ export const SubscriptionService = {
     };
   },
 
-  cancelSubscription(plan?: SubscriptionPlan): { success: boolean; message: string; profile: UserProfile } {
+  async cancelSubscription(plan?: SubscriptionPlan): Promise<{ success: boolean; message: string; profile: UserProfile }> {
     const current = StorageService.getProfile();
     const targetPlan = plan || current.subscription?.plan || 'weekly';
     const planDetail = SUBSCRIPTION_PLANS.find(p => p.id === targetPlan) || SUBSCRIPTION_PLANS[1];
 
-    const updated: UserProfile = {
+    let updated: UserProfile = {
       ...current,
       subscription: {
         ...current.subscription,
@@ -139,11 +139,20 @@ export const SubscriptionService = {
       },
     };
 
+    try {
+      const res = await apiService.cancelSubscription();
+      if (res && res.profile) {
+        updated = res.profile;
+      }
+    } catch (err) {
+      console.warn('[SubscriptionService] Remote cancellation error, applied local optimistic update:', err);
+    }
+
     StorageService.saveProfile(updated);
 
     return {
       success: true,
-      message: `To complete cancellation, send '${planDetail.unsubscribeBody}' to ${planDetail.smsRecipient}.`,
+      message: `Automatic renewal cancelled. Send '${planDetail.unsubscribeBody}' to ${planDetail.smsRecipient} if billed via SMS.`,
       profile: updated,
     };
   },

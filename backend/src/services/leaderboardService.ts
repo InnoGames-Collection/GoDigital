@@ -98,10 +98,10 @@ export const leaderboardService = {
 
         return userIds.map((uId, idx) => {
           const prof = profileMap.get(uId);
-          const rawPhone = prof?.phone_local || prof?.phone || '0911000000';
+          const rawPhone = prof?.phone_local || prof?.phone || '';
           const masked = rawPhone.length >= 7 
             ? `${rawPhone.substring(0, 3)}****${rawPhone.slice(-3)}` 
-            : '091****890';
+            : `Player ${idx + 1}`;
 
           return {
             rank: idx + 1,
@@ -146,10 +146,10 @@ export const leaderboardService = {
     }
 
     return dbRes.rows.map((r, idx) => {
-      const rawPhone = r.phone_local || r.phone || '0911000000';
+      const rawPhone = r.phone_local || r.phone || '';
       const masked = rawPhone.length >= 7 
         ? `${rawPhone.substring(0, 3)}****${rawPhone.slice(-3)}` 
-        : '091****890';
+        : `Player ${idx + 1}`;
 
       return {
         rank: idx + 1,

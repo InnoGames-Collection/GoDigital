@@ -225,9 +225,37 @@ export const HillRiderGame: React.FC<HillRiderGameProps> = ({
     HillRiderAudio.setMuted(!soundEnabled);
   }, [soundEnabled]);
 
-  // Clean up all audio on unmount
+  // Clean up all audio on unmount & handle visibility/blur lifecycle
   useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        HillRiderAudio.stopEngine();
+        HillRiderAudio.stopAll();
+        setStatus((prev) => (prev === 'playing' ? 'paused' : prev));
+      } else {
+        lastTimeRef.current = performance.now();
+      }
+    };
+
+    const handleWindowBlur = () => {
+      HillRiderAudio.stopEngine();
+      HillRiderAudio.stopAll();
+      setStatus((prev) => (prev === 'playing' ? 'paused' : prev));
+    };
+
+    const handleWindowFocus = () => {
+      lastTimeRef.current = performance.now();
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('blur', handleWindowBlur);
+    window.addEventListener('focus', handleWindowFocus);
+
     return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('blur', handleWindowBlur);
+      window.removeEventListener('focus', handleWindowFocus);
+      HillRiderAudio.stopEngine();
       HillRiderAudio.stopAll();
     };
   }, []);
@@ -897,108 +925,48 @@ export const HillRiderGame: React.FC<HillRiderGameProps> = ({
       className="relative w-full h-full min-h-[580px] bg-slate-950 flex flex-col select-none overflow-hidden font-sans"
     >
       {/* ========================================================================= */}
-      {/* 1. TOP HEADER BAR: Level Title, Difficulty Badge, Score HUD, Sound, Pause */}
+      {/* 1. TOP HEADER BAR: Strictly 4 functional items: Back, Level, Score, Time  */}
       {/* ========================================================================= */}
-      <div className="relative z-30 flex items-center justify-between px-3 sm:px-5 py-2.5 bg-slate-900/90 backdrop-blur-md border-b border-slate-800 shadow-md">
-        
-        {/* Game & Level Information */}
-        <div className="flex items-center gap-2.5">
-          <button
-            onClick={() => {
-              if (status === 'playing') {
-                HillRiderAudio.stopEngine();
-                setStatus('paused');
-              } else {
-                setStatus('level_select');
-              }
-            }}
-            className="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white flex items-center gap-1 text-xs font-bold transition-colors cursor-pointer border border-slate-700"
-            title="Levels / Pause"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            <span className="hidden sm:inline">{status === 'playing' ? 'PAUSE' : 'LEVELS'}</span>
-          </button>
+      <div className="relative z-30 flex items-center justify-between px-3 sm:px-5 py-2.5 bg-slate-900/95 backdrop-blur-md border-b border-slate-800 shadow-lg">
+        {/* Item 1: Back Button (Top-left corner, clearly visible and easy to tap) */}
+        <button
+          onClick={() => {
+            HillRiderAudio.stopEngine();
+            HillRiderAudio.stopAll();
+            setStatus('level_select');
+          }}
+          className="px-3 py-1.5 rounded-xl bg-slate-800/90 hover:bg-slate-700 text-slate-200 hover:text-white flex items-center gap-1.5 text-xs sm:text-sm font-bold transition-all cursor-pointer border border-slate-700/80 shadow"
+          title="Back to Levels"
+          aria-label="Back"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          <span>BACK</span>
+        </button>
 
-          <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-[#1688C9] to-[#8BCB3D] flex items-center justify-center text-white font-black text-xs shadow-md">
-            L{currentLevelNumber}
-          </div>
-          <div>
-            <div className="flex items-center gap-1.5">
-              <h1 className="text-white font-black text-xs sm:text-sm tracking-tight leading-none uppercase">
-                {currentLevelConfigRef.current.name}
-              </h1>
-              <span className={`px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wider ${
-                currentLevelConfigRef.current.tier.includes('Expert')
-                  ? 'bg-rose-500/20 text-rose-400 border border-rose-500/40'
-                  : currentLevelConfigRef.current.tier.includes('Extreme')
-                  ? 'bg-purple-500/20 text-purple-400 border border-purple-500/40'
-                  : 'bg-amber-500/20 text-amber-400 border border-amber-500/40'
-              }`}>
-                {currentLevelConfigRef.current.tier}
-              </span>
-            </div>
-            <div className="text-[10px] text-slate-400 font-semibold flex items-center gap-1.5 mt-0.5">
-              <span>TARGET: <strong className="text-amber-400 font-mono">{currentLevelConfigRef.current.targetDistance}m</strong></span>
-              <span>•</span>
-              <span>BEST: <strong className="text-cyan-400 font-mono">{progress.completedLevels[currentLevelNumber]?.bestScore || 0} PTS</strong></span>
-            </div>
+        {/* Item 2: Level (Clean numeric display) */}
+        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800/90 border border-slate-700/80 shadow">
+          <span className="text-[10px] text-slate-400 uppercase font-black tracking-wider">LEVEL</span>
+          <span className="text-white font-mono font-black text-sm sm:text-base">{currentLevelNumber}</span>
+        </div>
+
+        {/* Item 3: Score (Points scored so far) */}
+        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800/90 border border-slate-700/80 shadow">
+          <Trophy className="w-4 h-4 text-amber-400" />
+          <div className="flex items-center gap-1 leading-none">
+            <span className="text-[10px] text-slate-400 uppercase font-black tracking-wider">SCORE</span>
+            <span className="text-[#8BCB3D] font-mono font-black text-sm sm:text-base">{normalizedScore}</span>
           </div>
         </div>
 
-        {/* Live Score & Time Displays */}
-        <div className="flex items-center gap-2">
-          {/* Live Score Display */}
-          <div className="px-3 py-1 rounded-xl bg-slate-800/90 border border-slate-700/80 flex items-center gap-2">
-            <Trophy className="w-4 h-4 text-amber-400" />
-            <div className="text-right leading-none">
-              <div className="text-[9px] text-slate-400 uppercase font-bold">SCORE</div>
-              <div className="text-[#8BCB3D] font-mono font-black text-sm sm:text-base">
-                {normalizedScore}
-              </div>
-            </div>
+        {/* Item 4: Time (Remaining countdown time) */}
+        <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800/90 border shadow ${
+          timeLeft <= 15 ? 'border-rose-500/80 text-rose-400 animate-pulse' : 'border-slate-700/80 text-cyan-400'
+        }`}>
+          <Clock className="w-4 h-4" />
+          <div className="flex items-center gap-1 leading-none">
+            <span className="text-[10px] text-slate-400 uppercase font-black tracking-wider">TIME</span>
+            <span className="font-mono font-black text-sm sm:text-base">{formatTime(timeLeft)}</span>
           </div>
-
-          {/* Live 120s Time Limit Display */}
-          <div className={`px-2.5 sm:px-3 py-1 rounded-xl bg-slate-800/90 border flex items-center gap-1.5 sm:gap-2 ${
-            timeLeft <= 15 ? 'border-rose-500/80 text-rose-400 animate-pulse' : 'border-slate-700/80 text-cyan-400'
-          }`}>
-            <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-            <div className="text-right leading-none">
-              <div className="text-[9px] text-slate-400 uppercase font-bold">TIME</div>
-              <div className="font-mono font-black text-sm sm:text-base">
-                {formatTime(timeLeft)}
-              </div>
-            </div>
-          </div>
-
-          {/* Sound Toggle */}
-          <button
-            onClick={() => {
-              const nextVal = !soundEnabled;
-              setSoundEnabled(nextVal);
-              const updated = { ...soundSettings, soundEnabled: nextVal, engineSound: nextVal };
-              setSoundSettings(updated);
-              HillClimbStorage.saveSettings(updated);
-            }}
-            className="w-8 h-8 rounded-xl bg-slate-800 text-slate-300 hover:text-white flex items-center justify-center transition-colors cursor-pointer"
-            aria-label="Toggle Sound"
-          >
-            {soundEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4 text-rose-400" />}
-          </button>
-
-          {/* Pause / Resume */}
-          {status === 'playing' && (
-            <button
-              onClick={() => {
-                HillRiderAudio.stopEngine();
-                setStatus('paused');
-              }}
-              className="w-8 h-8 rounded-xl bg-slate-800 text-slate-300 hover:text-white flex items-center justify-center transition-colors cursor-pointer"
-              aria-label="Pause Game"
-            >
-              <Pause className="w-4 h-4" />
-            </button>
-          )}
         </div>
       </div>
 
@@ -1298,7 +1266,7 @@ export const HillRiderGame: React.FC<HillRiderGameProps> = ({
           </div>
           <h3 className="text-xl font-black text-white mb-1">Drive Paused</h3>
           <p className="text-xs text-slate-300 mb-5">
-            Level {currentLevelNumber}: {currentLevelConfigRef.current.name} • {distanceMeters}m / {currentLevelConfigRef.current.targetDistance}m
+            Level {currentLevelNumber} • {distanceMeters}m / {currentLevelConfigRef.current.targetDistance}m
           </p>
 
           <div className="w-full max-w-xs space-y-2.5">

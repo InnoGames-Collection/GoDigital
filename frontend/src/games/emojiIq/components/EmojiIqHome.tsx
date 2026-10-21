@@ -14,8 +14,8 @@ interface EmojiIqHomeProps {
   onPlay: () => void;
   onOpenLevelSelect: () => void;
   onOpenLeaderboard: () => void;
-  onOpenStore: () => void;
   onOpenHowToPlay: () => void;
+  onOpenStore?: () => void;
 }
 
 export const EmojiIqHome: React.FC<EmojiIqHomeProps> = ({
@@ -23,7 +23,6 @@ export const EmojiIqHome: React.FC<EmojiIqHomeProps> = ({
   onPlay,
   onOpenLevelSelect,
   onOpenLeaderboard,
-  onOpenStore,
   onOpenHowToPlay,
 }) => {
   const totalStars = Object.values(playerStats.starsByLevel).reduce((acc: number, val) => acc + (Number(val) || 0), 0);
@@ -192,30 +191,17 @@ export const EmojiIqHome: React.FC<EmojiIqHomeProps> = ({
           </button>
         </div>
 
-        {/* Store & How To Play row */}
-        <div className="w-full grid grid-cols-2 gap-2">
-          <button
-            onClick={() => {
-              emojiIqAudio.playPop();
-              onOpenStore();
-            }}
-            className="py-2.5 px-3 rounded-2xl bg-white border border-[#00B8D9]/30 shadow-sm flex items-center justify-center gap-1.5 hover:bg-slate-50 active:scale-95 transition-all text-xs font-bold text-[#241F3D]"
-          >
-            <ShoppingBag className="w-3.5 h-3.5 text-[#00B8D9]" />
-            <span>Store & Items</span>
-          </button>
-
-          <button
-            onClick={() => {
-              emojiIqAudio.playPop();
-              onOpenHowToPlay();
-            }}
-            className="py-2.5 px-3 rounded-2xl bg-white border border-slate-200 shadow-sm flex items-center justify-center gap-1.5 hover:bg-slate-50 active:scale-95 transition-all text-xs font-bold text-[#6B6780]"
-          >
-            <HelpCircle className="w-3.5 h-3.5" />
-            <span>Rules & Formulas</span>
-          </button>
-        </div>
+        {/* How To Play Bar */}
+        <button
+          onClick={() => {
+            emojiIqAudio.playPop();
+            onOpenHowToPlay();
+          }}
+          className="w-full py-3 px-3 rounded-2xl bg-white border border-[#00B8D9]/30 shadow-xs flex items-center justify-center gap-2 hover:bg-slate-50 active:scale-95 transition-all text-xs sm:text-sm font-bold text-[#241F3D] cursor-pointer"
+        >
+          <HelpCircle className="w-4 h-4 text-[#00B8D9]" />
+          <span>Rules & Puzzle Types</span>
+        </button>
       </div>
     </div>
   );

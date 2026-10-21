@@ -1,32 +1,29 @@
 /**
  * EMOJI IQ — Game Header
- * Header with Coins, Lives, Hints, Sound toggle, and Settings.
+ * Clean header with Exit, Emoji IQ badge, Hints counter, Sound toggle, and Settings.
+ * Completely free of lives/hearts and coin balance systems.
  */
 
 import React from 'react';
-import { Settings, Volume2, VolumeX, Lightbulb, Plus, Heart, ArrowLeft } from 'lucide-react';
+import { Settings, Volume2, VolumeX, Lightbulb, ArrowLeft, Brain } from 'lucide-react';
 import { EMOJI_IQ_COLORS } from '../colors';
 import { emojiIqAudio } from '../emojiIqAudio';
 
 interface EmojiIqHeaderProps {
-  coins: number;
-  lives: number;
-  maxLives?: number;
   availableHints: number;
-  onOpenStore: () => void;
   onOpenSettings: () => void;
   onBack?: () => void;
   onUseHint?: () => void;
   showHintButton?: boolean;
   hintsDisabled?: boolean;
+  coins?: number;
+  lives?: number;
+  maxLives?: number;
+  onOpenStore?: () => void;
 }
 
 export const EmojiIqHeader: React.FC<EmojiIqHeaderProps> = ({
-  coins,
-  lives,
-  maxLives = 3,
   availableHints,
-  onOpenStore,
   onOpenSettings,
   onBack,
   onUseHint,
@@ -42,7 +39,7 @@ export const EmojiIqHeader: React.FC<EmojiIqHeaderProps> = ({
 
   return (
     <header className="w-full max-w-md mx-auto flex items-center justify-between px-3 py-2 sm:px-4 sm:py-2.5 z-20 select-none">
-      {/* Top Left: Back/Exit Button & Coins Badge */}
+      {/* Top Left: Exit Button */}
       <div className="flex items-center gap-2">
         {onBack && (
           <button
@@ -51,59 +48,25 @@ export const EmojiIqHeader: React.FC<EmojiIqHeaderProps> = ({
               emojiIqAudio.playPop();
               onBack();
             }}
-            className="h-8 px-2.5 rounded-full bg-white border border-[#6C5CE7]/20 flex items-center gap-1 text-[#241F3D] hover:scale-105 active:scale-95 transition-transform shadow-xs cursor-pointer"
-            title="Return to GameON Tele Portal"
-            aria-label="Back to Portal"
+            className="h-8 px-2.5 rounded-full bg-white border border-[#6C5CE7]/20 flex items-center gap-1.5 text-[#241F3D] hover:scale-105 active:scale-95 transition-transform shadow-xs cursor-pointer"
+            title="Exit Game"
+            aria-label="Exit Game"
           >
             <ArrowLeft className="w-4 h-4 text-[#6C5CE7] stroke-[2.5]" />
-            <span className="text-[11px] font-bold text-[#6C5CE7] hidden xs:inline">Exit</span>
+            <span className="text-[11px] font-bold text-[#6C5CE7]">Exit</span>
           </button>
         )}
-
-        {/* Coins Badge (Clickable to open store) */}
-        <button
-          onClick={() => {
-            emojiIqAudio.playPop();
-            onOpenStore();
-          }}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white border shadow-sm hover:scale-105 active:scale-95 transition-transform"
-          style={{
-            borderColor: 'rgba(255, 183, 3, 0.4)',
-            boxShadow: '0 2px 8px rgba(255, 183, 3, 0.2)',
-          }}
-          title="Coin Balance — Tap to Visit Store"
-        >
-          <span className="text-base sm:text-lg">🪙</span>
-          <span
-            className="font-black text-xs sm:text-sm font-mono tracking-tight"
-            style={{ color: EMOJI_IQ_COLORS.textPrimary }}
-          >
-            {coins.toLocaleString()}
-          </span>
-          <div
-            className="w-4 h-4 rounded-full flex items-center justify-center text-white text-[10px] font-black"
-            style={{ backgroundColor: EMOJI_IQ_COLORS.accent }}
-          >
-            <Plus className="w-3 h-3 text-[#241F3D] stroke-[3]" />
-          </div>
-        </button>
       </div>
 
-      {/* Center: Lives Hearts */}
-      <div className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-white/80 backdrop-blur-sm border border-[#6C5CE7]/15 shadow-sm">
-        {Array.from({ length: maxLives }).map((_, idx) => {
-          const isAlive = idx < lives;
-          return (
-            <Heart
-              key={idx}
-              className={`w-4 h-4 sm:w-5 sm:h-5 transition-transform ${
-                isAlive
-                  ? 'fill-[#FF5A67] text-[#FF5A67] scale-100'
-                  : 'fill-slate-200 text-slate-300 scale-90'
-              }`}
-            />
-          );
-        })}
+      {/* Center: Clean Game Identity Badge */}
+      <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/90 backdrop-blur-sm border border-[#6C5CE7]/20 shadow-xs">
+        <Brain className="w-4 h-4 text-[#6C5CE7]" />
+        <span
+          className="text-xs font-black uppercase tracking-wider font-['Fredoka',sans-serif]"
+          style={{ color: EMOJI_IQ_COLORS.textPrimary }}
+        >
+          EMOJI <span style={{ color: EMOJI_IQ_COLORS.primary }}>IQ</span>
+        </span>
       </div>
 
       {/* Right Controls: Hint, Sound, Settings */}
@@ -112,13 +75,13 @@ export const EmojiIqHeader: React.FC<EmojiIqHeaderProps> = ({
         {showHintButton && (
           <button
             onClick={onUseHint}
-            disabled={hintsDisabled}
-            className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-black shadow-sm transition-all ${
-              hintsDisabled
+            disabled={hintsDisabled || availableHints <= 0}
+            className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-black shadow-xs transition-all ${
+              hintsDisabled || availableHints <= 0
                 ? 'opacity-40 bg-slate-200 text-slate-400 cursor-not-allowed'
                 : 'bg-white hover:scale-105 active:scale-95 text-[#241F3D] border border-[#FFB703]'
             }`}
-            title="Use Hint"
+            title={availableHints > 0 ? `Use Hint (${availableHints} remaining)` : 'No hints remaining'}
           >
             <Lightbulb className="w-3.5 h-3.5 text-[#FFB703] fill-[#FFB703]" />
             <span className="font-mono text-xs">{availableHints}</span>
@@ -128,8 +91,9 @@ export const EmojiIqHeader: React.FC<EmojiIqHeaderProps> = ({
         {/* Sound Toggle */}
         <button
           onClick={handleToggleSound}
-          className="w-8 h-8 rounded-full bg-white border border-[#6C5CE7]/20 flex items-center justify-center text-[#241F3D] hover:scale-105 active:scale-95 transition-transform shadow-sm"
+          className="w-8 h-8 rounded-full bg-white border border-[#6C5CE7]/20 flex items-center justify-center text-[#241F3D] hover:scale-105 active:scale-95 transition-transform shadow-xs"
           title={sfxOn ? 'Mute Sound' : 'Enable Sound'}
+          aria-label={sfxOn ? 'Mute Sound' : 'Enable Sound'}
         >
           {sfxOn ? (
             <Volume2 className="w-4 h-4 text-[#6C5CE7]" />
@@ -144,8 +108,9 @@ export const EmojiIqHeader: React.FC<EmojiIqHeaderProps> = ({
             emojiIqAudio.playPop();
             onOpenSettings();
           }}
-          className="w-8 h-8 rounded-full bg-white border border-[#6C5CE7]/20 flex items-center justify-center text-[#241F3D] hover:scale-105 active:scale-95 transition-transform shadow-sm"
+          className="w-8 h-8 rounded-full bg-white border border-[#6C5CE7]/20 flex items-center justify-center text-[#241F3D] hover:scale-105 active:scale-95 transition-transform shadow-xs"
           title="Game Settings"
+          aria-label="Game Settings"
         >
           <Settings className="w-4 h-4 text-[#6C5CE7]" />
         </button>

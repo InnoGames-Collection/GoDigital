@@ -332,6 +332,10 @@ export class SortingRenderer3D {
     this.renderer.setSize(width, height);
   }
 
+  public resize() {
+    this.handleResize();
+  }
+
   /**
    * Set up or rebuild the level's tubes and balls
    */

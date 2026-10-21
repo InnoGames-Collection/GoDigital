@@ -104,6 +104,26 @@ export const HelixJumpGame: React.FC<HelixJumpGameProps> = ({ onExit, onGameOver
     helixAudio.setSoundEnabled(saveData.soundEnabled);
   }, [saveData.soundEnabled]);
 
+  // Pause game when window blurs or document becomes hidden to suspend active floor timing
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.hidden && gameState === 'PLAYING') {
+        setGameState('PAUSED');
+      }
+    };
+    const handleBlur = () => {
+      if (gameState === 'PLAYING') {
+        setGameState('PAUSED');
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('blur', handleBlur);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('blur', handleBlur);
+    };
+  }, [gameState]);
+
   // Persist save data on updates
   const updateAndPersistSaveData = useCallback((updater: (prev: HelixJumpSaveData) => HelixJumpSaveData) => {
     setSaveData((prev) => {
