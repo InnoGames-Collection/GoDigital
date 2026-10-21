@@ -6,7 +6,7 @@
  * Free of coins, lives, and pay-to-continue prompts.
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { EmojiIqScreen, EmojiIqPlayerStats, TournamentScoreCalculation, EmojiIqQuestion } from './types';
 import { EMOJI_IQ_LEVELS, getQuestionsForLevel } from './questionDatabase';
 import { calculateIqTournamentScore } from './scoringEngine';
@@ -66,6 +66,9 @@ export const EmojiIqGame: React.FC<EmojiIqGameProps> = ({ onClose, onGameComplet
   const [eliminatedOptions, setEliminatedOptions] = useState<number[]>([]);
   const [lastScoreCalc, setLastScoreCalc] = useState<TournamentScoreCalculation | null>(null);
 
+  // Guard against duplicate level completion executions
+  const isLevelCompletedRef = useRef<boolean>(false);
+
   // Clean audio stop when unmounting
   useEffect(() => {
     return () => {
@@ -78,6 +81,7 @@ export const EmojiIqGame: React.FC<EmojiIqGameProps> = ({ onClose, onGameComplet
 
   // Initialize questions on level start
   const startLevel = useCallback((levelNum: number) => {
+    isLevelCompletedRef.current = false;
     setSelectedLevelNumber(levelNum);
     const newQuestions = getQuestionsForLevel(levelNum);
     setActiveQuestions(newQuestions);
@@ -178,6 +182,9 @@ export const EmojiIqGame: React.FC<EmojiIqGameProps> = ({ onClose, onGameComplet
     const nextIdx = currentQuestionIndex + 1;
 
     if (nextIdx >= activeQuestions.length) {
+      if (isLevelCompletedRef.current) return;
+      isLevelCompletedRef.current = true;
+
       // LEVEL COMPLETE!
       emojiIqAudio.playLevelClear();
 
